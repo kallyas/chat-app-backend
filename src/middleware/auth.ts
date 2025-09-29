@@ -100,7 +100,7 @@ export const optionalAuth = async (
   }
 };
 
-export const requireRoles = (roles: string[]) => {
+export const requireRoles = () => {
   return (req: AuthRequest, res: Response, next: NextFunction): void => {
     if (!req.user) {
       res.status(401).json({
