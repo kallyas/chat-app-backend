@@ -5,10 +5,10 @@ import { toObjectId, getPaginationInfo } from '@/utils';
 import { logger } from '@/config/logger';
 
 export interface CreateChatRoomData {
-  name?: string;
+  name?: string | undefined;
   type: ChatRoomType;
   participants: string[];
-  description?: string;
+  description?: string | undefined;
   createdBy: string;
 }
 
@@ -16,15 +16,15 @@ export interface SendMessageData {
   chatRoomId: string;
   senderId: string;
   content: string;
-  type?: MessageType;
-  replyTo?: string;
+  type?: MessageType | undefined;
+  replyTo?: string | undefined;
   metadata?: {
-    fileName?: string;
-    fileSize?: number;
-    mimeType?: string;
-    imageWidth?: number;
-    imageHeight?: number;
-  };
+  fileName?: string;
+  fileSize?: number;
+  mimeType?: string;
+  imageWidth?: number;
+  imageHeight?: number;
+} | undefined;
 }
 
 export interface GetMessagesQuery {
@@ -47,6 +47,11 @@ export class ChatService {
         throw new AppError('Some participants do not exist', 400);
       }
 
+      // Ensure creator is in participants
+      if (!participants.includes(createdBy)) {
+        participants.push(createdBy);
+      }
+
       // For private chats, check if room already exists
       if (type === ChatRoomType.PRIVATE) {
         if (participants.length !== 2) {
@@ -61,11 +66,6 @@ export class ChatService {
         if (existingRoom) {
           return existingRoom;
         }
-      }
-
-      // Ensure creator is in participants
-      if (!participants.includes(createdBy)) {
-        participants.push(createdBy);
       }
 
       const chatRoom = new ChatRoom({
@@ -195,7 +195,7 @@ export class ChatService {
 
   static async getMessages(chatRoomId: string, userId: string, query: GetMessagesQuery = {}): Promise<{
     messages: IMessage[];
-    pagination: any;
+    pagination: Record<string, any>;
   }> {
     try {
       const { page = 1, limit = 20, before } = query;
@@ -211,7 +211,7 @@ export class ChatService {
         throw new AppError('Chat room not found or access denied', 404);
       }
 
-      const filter: any = { chatRoomId: toObjectId(chatRoomId) };
+      const filter: Record<string, any> = { chatRoomId: toObjectId(chatRoomId) };
 
       if (before) {
         const beforeMessage = await Message.findById(before);
@@ -337,11 +337,11 @@ export class ChatService {
 
       // Only allow certain updates and check permissions
       const allowedUpdates = ['name', 'description', 'avatar'];
-      const updates: any = {};
+      const updates: Record<string, any> = {};
 
       Object.keys(updateData).forEach(key => {
         if (allowedUpdates.includes(key)) {
-          updates[key] = (updateData as any)[key];
+          updates[key] = (updateData as Record<string, any>)[key];
         }
       });
 
