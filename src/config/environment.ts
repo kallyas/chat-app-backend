@@ -14,7 +14,7 @@ const envVarsSchema = Joi.object({
   ALLOWED_ORIGINS: Joi.string().default('http://localhost:3000,http://localhost:3001'),
 }).unknown();
 
-const { error, value: envVars } = envVarsSchema.validate(process.env);
+const { error, value: envVars } = envVarsSchema.validate(process.env) as { error?: Joi.ValidationError; value: Record<string, string | number> };
 
 if (error) {
   throw new Error(`Config validation error: ${error.message}`);
@@ -35,6 +35,6 @@ export const config = {
     max: envVars.RATE_LIMIT_MAX_REQUESTS as number,
   },
   cors: {
-    origins: (envVars.ALLOWED_ORIGINS as string).split(',').map(origin => origin.trim()),
+    origins: (envVars.ALLOWED_ORIGINS as string).split(',').map((origin: string) => origin.trim()),
   },
 };
