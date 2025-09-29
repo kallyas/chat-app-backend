@@ -1,3 +1,4 @@
+import 'module-alias/register';
 import { createServer } from 'http';
 import { config } from '@/config/environment';
 import { logger } from '@/config/logger';
