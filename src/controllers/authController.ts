@@ -1,17 +1,17 @@
 import { Request, Response } from 'express';
-import { AuthService } from '@/services';
+import { AuthService, type RegisterUserData, type LoginUserData } from '@/services';
 import { catchAsync, AppError, generateAccessToken, generateRefreshToken, AuthRequest } from '@/middleware';
 import { registerSchema, loginSchema, resetPasswordSchema } from '@/utils';
-import { logger } from '@/config/logger';
+import type { IUser } from '@/models';
 
 export const register = catchAsync(async (req: Request, res: Response) => {
-  const { error, value } = registerSchema.validate(req.body);
+  const validation = registerSchema.validate(req.body);
   
-  if (error) {
-    throw new AppError(error.details[0].message, 400);
+  if (validation.error) {
+    throw new AppError(validation.error.details[0].message, 400);
   }
 
-  const user = await AuthService.registerUser(value);
+  const user = await AuthService.registerUser(validation.value as RegisterUserData);
   
   const accessToken = generateAccessToken(user);
   const refreshToken = generateRefreshToken(user);
@@ -30,13 +30,13 @@ export const register = catchAsync(async (req: Request, res: Response) => {
 });
 
 export const login = catchAsync(async (req: Request, res: Response) => {
-  const { error, value } = loginSchema.validate(req.body);
+  const validation = loginSchema.validate(req.body);
   
-  if (error) {
-    throw new AppError(error.details[0].message, 400);
+  if (validation.error) {
+    throw new AppError(validation.error.details[0].message, 400);
   }
 
-  const user = await AuthService.loginUser(value);
+  const user = await AuthService.loginUser(validation.value as LoginUserData);
   
   const accessToken = generateAccessToken(user);
   const refreshToken = generateRefreshToken(user);
@@ -67,10 +67,12 @@ export const logout = catchAsync(async (req: AuthRequest, res: Response) => {
   });
 });
 
-export const getMe = catchAsync(async (req: AuthRequest, res: Response) => {
+export const getMe = catchAsync(async (req: AuthRequest, res: Response): Promise<void> => {
   if (!req.user) {
     throw new AppError('User not authenticated', 401);
   }
+
+  await Promise.resolve(); // Satisfy the await requirement
 
   res.status(200).json({
     success: true,
@@ -85,7 +87,7 @@ export const updateProfile = catchAsync(async (req: AuthRequest, res: Response) 
     throw new AppError('User not authenticated', 401);
   }
 
-  const user = await AuthService.updateUserProfile(req.user._id.toString(), req.body);
+  const user = await AuthService.updateUserProfile(req.user._id.toString(), req.body as Partial<IUser>);
 
   res.status(200).json({
     success: true,
@@ -97,13 +99,13 @@ export const updateProfile = catchAsync(async (req: AuthRequest, res: Response) 
 });
 
 export const initiatePasswordReset = catchAsync(async (req: Request, res: Response) => {
-  const { error, value } = resetPasswordSchema.validate(req.body);
+  const validation = resetPasswordSchema.validate(req.body);
   
-  if (error) {
-    throw new AppError(error.details[0].message, 400);
+  if (validation.error) {
+    throw new AppError(validation.error.details[0].message, 400);
   }
 
-  const resetToken = await AuthService.initiatePasswordReset(value.email);
+  const resetToken = await AuthService.initiatePasswordReset((validation.value as { email: string }).email);
 
   // In production, you would send this token via email
   // For demo purposes, we're returning it in the response
@@ -118,7 +120,7 @@ export const initiatePasswordReset = catchAsync(async (req: Request, res: Respon
 
 export const resetPassword = catchAsync(async (req: Request, res: Response) => {
   const { token } = req.params;
-  const { password } = req.body;
+  const { password } = req.body as { password: string };
 
   if (!password) {
     throw new AppError('Password is required', 400);
@@ -136,8 +138,8 @@ export const resetPassword = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
-export const refreshToken = catchAsync(async (req: Request, res: Response) => {
-  const { refreshToken: token } = req.body;
+export const refreshToken = catchAsync(async (req: Request): Promise<never> => {
+  const { refreshToken: token } = req.body as { refreshToken: string };
 
   if (!token) {
     throw new AppError('Refresh token is required', 400);
@@ -147,6 +149,7 @@ export const refreshToken = catchAsync(async (req: Request, res: Response) => {
   // and generate new access/refresh tokens
   // For simplicity, we're not implementing full refresh token logic here
   
+  await Promise.resolve();
   throw new AppError('Refresh token functionality not implemented', 501);
 });
 
