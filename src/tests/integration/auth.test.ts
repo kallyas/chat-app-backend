@@ -146,9 +146,10 @@ describe('Auth Integration Tests', () => {
 
   describe('GET /api/auth/me', () => {
     let accessToken: string;
+    let uniqueUserData: any;
 
     beforeEach(async () => {
-      const uniqueUserData = generateUniqueUserData('me-get');
+      uniqueUserData = generateUniqueUserData('me-get');
       
       const registerResponse = await request(app)
         .post('/api/auth/register')
@@ -164,7 +165,7 @@ describe('Auth Integration Tests', () => {
         .expect(200);
 
       expect(response.body.success).toBe(true);
-      expect(response.body.data.user.email).toBe(validUserData.email);
+      expect(response.body.data.user.email).toBe(uniqueUserData.email);
       expect(response.body.data.user.password).toBeUndefined();
     });
 
