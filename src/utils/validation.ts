@@ -62,7 +62,7 @@ export const createChatRoomSchema = Joi.object({
     .valid('private', 'group')
     .required(),
   participants: Joi.array()
-    .items(Joi.string().custom((value, helpers) => {
+    .items(Joi.string().custom((value: string, helpers) => {
       if (!mongoose.Types.ObjectId.isValid(value)) {
         return helpers.error('any.invalid');
       }
@@ -87,7 +87,7 @@ export const sendMessageSchema = Joi.object({
   type: Joi.string()
     .valid('text', 'image', 'file')
     .default('text'),
-  replyTo: Joi.string().custom((value, helpers) => {
+  replyTo: Joi.string().custom((value: string, helpers) => {
     if (value && !mongoose.Types.ObjectId.isValid(value)) {
       return helpers.error('any.invalid');
     }
@@ -132,7 +132,7 @@ export const resetPasswordSchema = Joi.object({
     }),
 });
 
-export const objectIdSchema = Joi.string().custom((value, helpers) => {
+export const objectIdSchema = Joi.string().custom((value: string, helpers) => {
   if (!mongoose.Types.ObjectId.isValid(value)) {
     return helpers.error('any.invalid', { message: 'Invalid ID format' });
   }
