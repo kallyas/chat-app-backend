@@ -20,3 +20,8 @@ export {
   messageLimiter, 
   searchLimiter 
 } from './rateLimiter';
+
+export { 
+  requestLogger, 
+  addRequestId 
+} from './requestLogger';
