@@ -31,10 +31,12 @@ class Database {
         logger.warn('MongoDB disconnected');
       });
 
-      process.on('SIGINT', async () => {
-        await mongoose.connection.close();
-        logger.info('MongoDB connection closed due to application termination');
-        process.exit(0);
+      process.on('SIGINT', () => {
+        void (async () => {
+          await mongoose.connection.close();
+          logger.info('MongoDB connection closed due to application termination');
+          process.exit(0);
+        })();
       });
 
     } catch (error) {
