@@ -42,7 +42,7 @@ export interface IMessage extends Document {
 
 export interface IMessageModel extends mongoose.Model<IMessage> {
   getUnreadCount(chatRoomId: mongoose.Types.ObjectId, userId: mongoose.Types.ObjectId): Promise<number>;
-  markRoomMessagesAsRead(chatRoomId: mongoose.Types.ObjectId, userId: mongoose.Types.ObjectId): Promise<any>;
+  markRoomMessagesAsRead(chatRoomId: mongoose.Types.ObjectId, userId: mongoose.Types.ObjectId): Promise<mongoose.UpdateWriteOpResult>;
 }
 
 const messageSchema = new Schema<IMessage>(
@@ -113,7 +113,7 @@ const messageSchema = new Schema<IMessage>(
 );
 
 messageSchema.methods.markAsRead = function (userId: mongoose.Types.ObjectId) {
-  const existingRead = this.readBy.find((read: any) => 
+  const existingRead = this.readBy.find((read: { userId: mongoose.Types.ObjectId; readAt: Date }) => 
     read.userId.equals(userId)
   );
   
@@ -121,7 +121,7 @@ messageSchema.methods.markAsRead = function (userId: mongoose.Types.ObjectId) {
     this.readBy.push({
       userId,
       readAt: new Date(),
-    });
+    } as { userId: mongoose.Types.ObjectId; readAt: Date });
   }
   
   return this.save();
@@ -177,4 +177,4 @@ messageSchema.index({ 'readBy.userId': 1 });
 messageSchema.index({ status: 1 });
 messageSchema.index({ type: 1 });
 
-export const Message = mongoose.model<IMessage, IMessageModel>('Message', messageSchema) as IMessageModel;
+export const Message = mongoose.model<IMessage, IMessageModel>('Message', messageSchema);
