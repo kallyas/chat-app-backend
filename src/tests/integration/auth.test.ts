@@ -5,12 +5,15 @@ import { User } from '@/models/User';
 describe('Auth Integration Tests', () => {
   const app = createApp();
 
-  const validUserData = {
-    email: 'test@example.com',
-    username: 'testuser',
+  // Generate unique test data for each test to avoid conflicts
+  const generateUniqueUserData = (prefix = 'test') => ({
+    email: `${prefix}-${Date.now()}-${Math.random().toString(36).substr(2, 5)}@example.com`,
+    username: `${prefix}user-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
     password: 'password123',
     profilePic: 'http://example.com/pic.jpg',
-  };
+  });
+
+  const validUserData = generateUniqueUserData();
 
   describe('POST /api/auth/register', () => {
     it('should register a new user successfully', async () => {
@@ -74,24 +77,29 @@ describe('Auth Integration Tests', () => {
   });
 
   describe('POST /api/auth/login', () => {
+    let loginUserData: any;
+
     beforeEach(async () => {
+      // Generate unique user data for each test
+      loginUserData = generateUniqueUserData('login');
+      
       // Register a user for login tests
       await request(app)
         .post('/api/auth/register')
-        .send(validUserData);
+        .send(loginUserData);
     });
 
     it('should login user with correct credentials', async () => {
       const response = await request(app)
         .post('/api/auth/login')
         .send({
-          email: validUserData.email,
-          password: validUserData.password,
+          email: loginUserData.email,
+          password: loginUserData.password,
         })
         .expect(200);
 
       expect(response.body.success).toBe(true);
-      expect(response.body.data.user.email).toBe(validUserData.email);
+      expect(response.body.data.user.email).toBe(loginUserData.email);
       expect(response.body.data.user.isOnline).toBe(true);
       expect(response.body.data.tokens.access).toBeDefined();
       expect(response.body.data.tokens.refresh).toBeDefined();
@@ -102,7 +110,7 @@ describe('Auth Integration Tests', () => {
         .post('/api/auth/login')
         .send({
           email: 'wrong@example.com',
-          password: validUserData.password,
+          password: loginUserData.password,
         })
         .expect(401);
 
@@ -114,7 +122,7 @@ describe('Auth Integration Tests', () => {
       const response = await request(app)
         .post('/api/auth/login')
         .send({
-          email: validUserData.email,
+          email: loginUserData.email,
           password: 'wrongpassword',
         })
         .expect(401);
@@ -140,9 +148,11 @@ describe('Auth Integration Tests', () => {
     let accessToken: string;
 
     beforeEach(async () => {
+      const uniqueUserData = generateUniqueUserData('me-get');
+      
       const registerResponse = await request(app)
         .post('/api/auth/register')
-        .send(validUserData);
+        .send(uniqueUserData);
 
       accessToken = registerResponse.body.data.tokens.access;
     });
@@ -180,11 +190,14 @@ describe('Auth Integration Tests', () => {
 
   describe('POST /api/auth/logout', () => {
     let accessToken: string;
+    let logoutUserData: any;
 
     beforeEach(async () => {
+      logoutUserData = generateUniqueUserData('logout');
+      
       const registerResponse = await request(app)
         .post('/api/auth/register')
-        .send(validUserData);
+        .send(logoutUserData);
 
       accessToken = registerResponse.body.data.tokens.access;
     });
@@ -199,7 +212,7 @@ describe('Auth Integration Tests', () => {
       expect(response.body.message).toContain('Logout successful');
 
       // Verify user is offline
-      const user = await User.findOne({ email: validUserData.email });
+      const user = await User.findOne({ email: logoutUserData.email });
       expect(user?.isOnline).toBe(false);
     });
 
@@ -216,9 +229,11 @@ describe('Auth Integration Tests', () => {
     let accessToken: string;
 
     beforeEach(async () => {
+      const uniqueUserData = generateUniqueUserData('me');
+      
       const registerResponse = await request(app)
         .post('/api/auth/register')
-        .send(validUserData);
+        .send(uniqueUserData);
 
       accessToken = registerResponse.body.data.tokens.access;
     });

@@ -11,19 +11,17 @@ describe('ChatRoom Integration Tests', () => {
   let user1Id: string;
   let user2Id: string;
 
-  beforeEach(async () => {
-    // Register two users for testing
-    const user1Data = {
-      email: 'user1@example.com',
-      username: 'user1',
-      password: 'password123',
-    };
+  // Generate unique test data for each test run
+  const generateUniqueUserData = (prefix: string) => ({
+    email: `${prefix}-${Date.now()}-${Math.random().toString(36).substr(2, 5)}@example.com`,
+    username: `${prefix}-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
+    password: 'password123',
+  });
 
-    const user2Data = {
-      email: 'user2@example.com',
-      username: 'user2',
-      password: 'password123',
-    };
+  beforeEach(async () => {
+    // Register two users for testing with unique data
+    const user1Data = generateUniqueUserData('user1');
+    const user2Data = generateUniqueUserData('user2');
 
     const user1Response = await request(app)
       .post('/api/auth/register')
@@ -219,11 +217,7 @@ describe('ChatRoom Integration Tests', () => {
 
     it('should return 404 for room user is not participant in', async () => {
       // Create another user
-      const user3Data = {
-        email: 'user3@example.com',
-        username: 'user3',
-        password: 'password123',
-      };
+      const user3Data = generateUniqueUserData('user3');
 
       const user3Response = await request(app)
         .post('/api/auth/register')
