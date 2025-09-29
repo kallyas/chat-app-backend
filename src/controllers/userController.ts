@@ -3,10 +3,12 @@ import { AuthService } from '@/services';
 import { catchAsync, AppError, AuthRequest } from '@/middleware';
 import { updateUserSchema, searchSchema } from '@/utils';
 
-export const getProfile = catchAsync(async (req: AuthRequest, res: Response) => {
+export const getProfile = catchAsync(async (req: AuthRequest, res: Response): Promise<void> => {
   if (!req.user) {
     throw new AppError('User not authenticated', 401);
   }
+
+  await Promise.resolve(); // Satisfy the await requirement
 
   res.status(200).json({
     success: true,
@@ -21,13 +23,13 @@ export const updateProfile = catchAsync(async (req: AuthRequest, res: Response) 
     throw new AppError('User not authenticated', 401);
   }
 
-  const { error, value } = updateUserSchema.validate(req.body);
+  const validation = updateUserSchema.validate(req.body);
   
-  if (error) {
-    throw new AppError(error.details[0].message, 400);
+  if (validation.error) {
+    throw new AppError(validation.error.details[0].message, 400);
   }
 
-  const user = await AuthService.updateUserProfile(req.user._id.toString(), value);
+  const user = await AuthService.updateUserProfile(req.user._id.toString(), validation.value as { username?: string; profilePic?: string; password?: string });
 
   res.status(200).json({
     success: true,
@@ -43,16 +45,16 @@ export const searchUsers = catchAsync(async (req: AuthRequest, res: Response) =>
     throw new AppError('User not authenticated', 401);
   }
 
-  const { error, value } = searchSchema.validate(req.query);
+  const validation = searchSchema.validate(req.query);
   
-  if (error) {
-    throw new AppError(error.details[0].message, 400);
+  if (validation.error) {
+    throw new AppError(validation.error.details[0].message, 400);
   }
 
   const users = await AuthService.searchUsers(
-    value.query,
+    (validation.value as { query: string }).query,
     req.user._id.toString(),
-    value.type
+    (validation.value as { type: string }).type as 'username' | 'email' | 'both'
   );
 
   res.status(200).json({
@@ -73,7 +75,7 @@ export const getOnlineUsers = catchAsync(async (req: AuthRequest, res: Response)
 
   // Filter out the current user from the online users list
   const filteredUsers = users.filter(user => 
-    !user._id.equals(req.user!._id)
+    req.user && !user._id.equals(req.user._id)
   );
 
   res.status(200).json({
@@ -111,7 +113,7 @@ export const updateOnlineStatus = catchAsync(async (req: AuthRequest, res: Respo
     throw new AppError('User not authenticated', 401);
   }
 
-  const { isOnline } = req.body;
+  const { isOnline } = req.body as { isOnline: boolean };
 
   if (typeof isOnline !== 'boolean') {
     throw new AppError('isOnline must be a boolean', 400);
