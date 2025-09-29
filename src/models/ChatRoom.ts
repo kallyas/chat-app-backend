@@ -1,5 +1,4 @@
 import mongoose, { Document, Schema } from 'mongoose';
-import { IUser } from './User';
 
 export enum ChatRoomType {
   PRIVATE = 'private',
@@ -71,16 +70,16 @@ const chatRoomSchema = new Schema<IChatRoom>(
     lastMessage: {
       content: {
         type: String,
-        required: true,
+        required: false,
       },
       sender: {
         type: Schema.Types.ObjectId,
         ref: 'User',
-        required: true,
+        required: false,
       },
       timestamp: {
         type: Date,
-        required: true,
+        required: false,
       },
       messageType: {
         type: String,
@@ -99,9 +98,7 @@ chatRoomSchema.pre('save', function (next) {
     if (this.participants.length !== 2) {
       return next(new Error('Private chat room must have exactly 2 participants'));
     }
-    if (!this.name) {
-      this.name = `Chat between ${this.participants.join(' and ')}`;
-    }
+    // Private chats don't need a name - leave it undefined
   }
 
   if (this.type === ChatRoomType.GROUP && this.participants.length < 3) {
@@ -116,7 +113,7 @@ chatRoomSchema.methods.addParticipant = function (userId: mongoose.Types.ObjectI
     throw new Error('Cannot add participants to private chat');
   }
   
-  if (!this.participants.includes(userId)) {
+  if (!this.participants.some((id: mongoose.Types.ObjectId) => id.equals(userId))) {
     this.participants.push(userId);
   }
   
@@ -126,7 +123,7 @@ chatRoomSchema.methods.addParticipant = function (userId: mongoose.Types.ObjectI
 chatRoomSchema.methods.removeParticipant = function (userId: mongoose.Types.ObjectId) {
   this.participants = this.participants.filter(
     (participantId: mongoose.Types.ObjectId) => !participantId.equals(userId)
-  );
+  ) as mongoose.Types.ObjectId[];
   
   if (this.participants.length === 0) {
     this.isActive = false;
