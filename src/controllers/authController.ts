@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import { AuthService } from '@/services';
 import { catchAsync, AppError, generateAccessToken, generateRefreshToken } from '@/middleware';
-import { registerSchema, loginSchema, resetPasswordSchema } from '@/utils';
+import { registerSchema, loginSchema, resetPasswordSchema, logUserAction, logSecurityEvent } from '@/utils';
 import type { IUser } from '@/models';
 import type { RegisterUserData, LoginUserData, AuthRequest } from '@/types';
 
@@ -16,6 +16,13 @@ export const register = catchAsync(async (req: Request, res: Response) => {
   
   const accessToken = generateAccessToken(user);
   const refreshToken = generateRefreshToken(user);
+
+  // Log user registration
+  logUserAction(user._id.toString(), 'REGISTER', 'USER', {
+    email: user.email,
+    username: user.username,
+    ip: req.ip,
+  });
 
   res.status(201).json({
     success: true,
