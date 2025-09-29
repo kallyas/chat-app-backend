@@ -24,7 +24,7 @@ const handleCastErrorDB = (err: mongoose.Error.CastError) => {
   return new AppError(message, 400);
 };
 
-const handleDuplicateFieldsDB = (err: any) => {
+const handleDuplicateFieldsDB = (err: { keyValue: Record<string, any> }) => {
   const field = Object.keys(err.keyValue)[0];
   const value = err.keyValue[field];
   const message = `Duplicate field value: ${value}. Please use another value for ${field}`;
@@ -72,7 +72,7 @@ export const globalErrorHandler = (
   err: any,
   req: Request,
   res: Response,
-  next: NextFunction
+  _next: NextFunction
 ): void => {
   err.statusCode = err.statusCode || 500;
 
@@ -100,7 +100,7 @@ export const globalErrorHandler = (
   }
 };
 
-export const catchAsync = (fn: Function) => {
+export const catchAsync = (fn: (req: Request, res: Response, next: NextFunction) => Promise<any>) => {
   return (req: Request, res: Response, next: NextFunction) => {
     fn(req, res, next).catch(next);
   };
