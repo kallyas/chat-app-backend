@@ -1,0 +1,126 @@
+import { Request, Response } from 'express';
+import { AuthService } from '@/services';
+import { catchAsync, AppError, AuthRequest } from '@/middleware';
+import { updateUserSchema, searchSchema } from '@/utils';
+
+export const getProfile = catchAsync(async (req: AuthRequest, res: Response) => {
+  if (!req.user) {
+    throw new AppError('User not authenticated', 401);
+  }
+
+  res.status(200).json({
+    success: true,
+    data: {
+      user: req.user,
+    },
+  });
+});
+
+export const updateProfile = catchAsync(async (req: AuthRequest, res: Response) => {
+  if (!req.user) {
+    throw new AppError('User not authenticated', 401);
+  }
+
+  const { error, value } = updateUserSchema.validate(req.body);
+  
+  if (error) {
+    throw new AppError(error.details[0].message, 400);
+  }
+
+  const user = await AuthService.updateUserProfile(req.user._id.toString(), value);
+
+  res.status(200).json({
+    success: true,
+    message: 'Profile updated successfully',
+    data: {
+      user,
+    },
+  });
+});
+
+export const searchUsers = catchAsync(async (req: AuthRequest, res: Response) => {
+  if (!req.user) {
+    throw new AppError('User not authenticated', 401);
+  }
+
+  const { error, value } = searchSchema.validate(req.query);
+  
+  if (error) {
+    throw new AppError(error.details[0].message, 400);
+  }
+
+  const users = await AuthService.searchUsers(
+    value.query,
+    req.user._id.toString(),
+    value.type
+  );
+
+  res.status(200).json({
+    success: true,
+    data: {
+      users,
+      count: users.length,
+    },
+  });
+});
+
+export const getOnlineUsers = catchAsync(async (req: AuthRequest, res: Response) => {
+  if (!req.user) {
+    throw new AppError('User not authenticated', 401);
+  }
+
+  const users = await AuthService.getOnlineUsers();
+
+  // Filter out the current user from the online users list
+  const filteredUsers = users.filter(user => 
+    !user._id.equals(req.user!._id)
+  );
+
+  res.status(200).json({
+    success: true,
+    data: {
+      users: filteredUsers,
+      count: filteredUsers.length,
+    },
+  });
+});
+
+export const getUserById = catchAsync(async (req: Request, res: Response) => {
+  const { userId } = req.params;
+
+  if (!userId) {
+    throw new AppError('User ID is required', 400);
+  }
+
+  const user = await AuthService.getUserById(userId);
+
+  if (!user) {
+    throw new AppError('User not found', 404);
+  }
+
+  res.status(200).json({
+    success: true,
+    data: {
+      user,
+    },
+  });
+});
+
+export const updateOnlineStatus = catchAsync(async (req: AuthRequest, res: Response) => {
+  if (!req.user) {
+    throw new AppError('User not authenticated', 401);
+  }
+
+  const { isOnline } = req.body;
+
+  if (typeof isOnline !== 'boolean') {
+    throw new AppError('isOnline must be a boolean', 400);
+  }
+
+  await AuthService.updateUserOnlineStatus(req.user._id.toString(), isOnline);
+
+  res.status(200).json({
+    success: true,
+    message: 'Online status updated successfully',
+  });
+});
