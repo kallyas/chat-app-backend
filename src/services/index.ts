@@ -1,2 +1,2 @@
-export { AuthService, type RegisterUserData, type LoginUserData } from './authService';
+export { AuthService } from './authService';
 export { ChatService } from './chatService';

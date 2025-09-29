@@ -1,8 +1,9 @@
 import { Request, Response } from 'express';
-import { AuthService, type RegisterUserData, type LoginUserData } from '@/services';
-import { catchAsync, AppError, generateAccessToken, generateRefreshToken, AuthRequest } from '@/middleware';
+import { AuthService } from '@/services';
+import { catchAsync, AppError, generateAccessToken, generateRefreshToken } from '@/middleware';
 import { registerSchema, loginSchema, resetPasswordSchema } from '@/utils';
 import type { IUser } from '@/models';
+import type { RegisterUserData, LoginUserData, AuthRequest } from '@/types';
 
 export const register = catchAsync(async (req: Request, res: Response) => {
   const validation = registerSchema.validate(req.body);

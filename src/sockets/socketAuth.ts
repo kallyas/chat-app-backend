@@ -3,7 +3,7 @@ import jwt from 'jsonwebtoken';
 import { User } from '@/models';
 import { config } from '@/config/environment';
 import { logger } from '@/config/logger';
-import { JWTPayload } from '@/middleware';
+import { JWTPayload } from '@/types';
 
 export interface AuthenticatedSocket extends Socket {
   userId?: string;
