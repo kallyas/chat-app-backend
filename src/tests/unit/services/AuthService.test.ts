@@ -1,5 +1,4 @@
 import { AuthService } from '@/services/authService';
-import { User } from '@/models/User';
 import { AppError } from '@/middleware';
 
 describe('AuthService', () => {
@@ -120,7 +119,7 @@ describe('AuthService', () => {
 
     it('should not allow duplicate username', async () => {
       // Create another user
-      const anotherUser = await AuthService.registerUser({
+      await AuthService.registerUser({
         email: 'another@example.com',
         username: 'anotheruser',
         password: 'password123',
