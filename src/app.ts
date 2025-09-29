@@ -3,11 +3,14 @@ import cors from 'cors';
 import helmet from 'helmet';
 import { config } from '@/config/environment';
 import { logger } from '@/config/logger';
-import { globalErrorHandler, notFound, generalLimiter } from '@/middleware';
+import { globalErrorHandler, notFound, generalLimiter, requestLogger, addRequestId } from '@/middleware';
 import routes from '@/routes';
 
 export const createApp = () => {
   const app = express();
+
+  // Request ID middleware (should be first)
+  app.use(addRequestId);
 
   // Security middleware
   app.use(helmet());
@@ -27,14 +30,8 @@ export const createApp = () => {
   app.use(express.json({ limit: '10mb' }));
   app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-  // Request logging middleware
-  app.use((req, res, next) => {
-    logger.info(`${req.method} ${req.originalUrl}`, {
-      ip: req.ip,
-      userAgent: req.get('User-Agent'),
-    });
-    next();
-  });
+  // Enhanced request logging middleware
+  app.use(requestLogger);
 
   // API routes
   app.use('/api', routes);
