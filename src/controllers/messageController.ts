@@ -1,7 +1,9 @@
-import { Request, Response } from 'express';
+import { Response } from 'express';
 import { ChatService } from '@/services';
 import { catchAsync, AppError, AuthRequest } from '@/middleware';
 import { sendMessageSchema, paginationSchema, objectIdSchema } from '@/utils';
+import { MessageType } from '@/models';
+import { SendMessageData } from '@/services/chatService';
 
 export const sendMessage = catchAsync(async (req: AuthRequest, res: Response) => {
   if (!req.user) {
@@ -15,18 +17,22 @@ export const sendMessage = catchAsync(async (req: AuthRequest, res: Response) =>
     throw new AppError('Invalid room ID format', 400);
   }
 
-  const { error, value } = sendMessageSchema.validate(req.body);
-  if (error) {
-    throw new AppError(error.details[0].message, 400);
+  const validation = sendMessageSchema.validate(req.body);
+  if (validation.error) {
+    throw new AppError(validation.error.details[0].message, 400);
   }
 
+  const { content, type, replyTo, metadata } = validation.value as { content: string; type?: string; replyTo?: string; metadata?: Record<string, unknown> };
   const messageData = {
-    ...value,
+    content,
+    type: type,
+    replyTo,
+    metadata,
     chatRoomId: roomId,
     senderId: req.user._id.toString(),
   };
 
-  const message = await ChatService.sendMessage(messageData);
+  const message = await ChatService.sendMessage(messageData as SendMessageData);
 
   res.status(201).json({
     success: true,
@@ -49,14 +55,14 @@ export const getMessages = catchAsync(async (req: AuthRequest, res: Response) =>
     throw new AppError('Invalid room ID format', 400);
   }
 
-  const { error, value } = paginationSchema.validate(req.query);
-  if (error) {
-    throw new AppError(error.details[0].message, 400);
+  const validation = paginationSchema.validate(req.query);
+  if (validation.error) {
+    throw new AppError(validation.error.details[0].message, 400);
   }
 
   const query = {
-    page: value.page,
-    limit: value.limit,
+    page: (validation.value as { page: number }).page,
+    limit: (validation.value as { limit: number }).limit,
     before: req.query.before as string,
   };
 
@@ -77,7 +83,7 @@ export const editMessage = catchAsync(async (req: AuthRequest, res: Response) =>
   }
 
   const { messageId } = req.params;
-  const { content } = req.body;
+  const { content } = req.body as { content: string };
   
   const messageIdValidation = objectIdSchema.validate(messageId);
   if (messageIdValidation.error) {
@@ -123,7 +129,7 @@ export const deleteMessage = catchAsync(async (req: AuthRequest, res: Response) 
   });
 });
 
-export const markMessageAsRead = catchAsync(async (req: AuthRequest, res: Response) => {
+export const markMessageAsRead = catchAsync(async (req: AuthRequest, res: Response): Promise<void> => {
   if (!req.user) {
     throw new AppError('User not authenticated', 401);
   }
@@ -137,6 +143,7 @@ export const markMessageAsRead = catchAsync(async (req: AuthRequest, res: Respon
 
   // This would typically be handled automatically through socket events,
   // but providing a REST endpoint as fallback
+  await Promise.resolve(); // Satisfy the await requirement
   res.status(200).json({
     success: true,
     message: 'Message marked as read - typically handled via socket events',
