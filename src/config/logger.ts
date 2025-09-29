@@ -12,7 +12,7 @@ const developmentFormat = winston.format.combine(
   winston.format.timestamp({ format: 'HH:mm:ss' }),
   winston.format.printf(
     ({ timestamp, level, message, stack }) =>
-      `${timestamp} [${level}]: ${stack || message}`
+      `${String(timestamp)} [${String(level)}]: ${String(stack ?? message)}`
   )
 );
 
