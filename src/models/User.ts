@@ -6,11 +6,11 @@ export interface IUser extends Document {
   email: string;
   username: string;
   password: string;
-  profilePic?: string;
+  profilePic?: string | undefined;
   isOnline: boolean;
   lastSeen: Date;
-  resetPasswordToken?: string;
-  resetPasswordExpire?: Date;
+  resetPasswordToken?: string | undefined;
+  resetPasswordExpire?: Date | undefined;
   createdAt: Date;
   updatedAt: Date;
   comparePassword(enteredPassword: string): Promise<boolean>;
@@ -83,11 +83,11 @@ userSchema.pre('save', async function (next) {
 userSchema.methods.comparePassword = async function (
   enteredPassword: string
 ): Promise<boolean> {
-  return await bcrypt.compare(enteredPassword, this.password);
+  return await bcrypt.compare(enteredPassword, this.password as string);
 };
 
 userSchema.methods.toJSON = function () {
-  const userObject = this.toObject();
+  const userObject = this.toObject() as Record<string, unknown>;
   delete userObject.password;
   delete userObject.resetPasswordToken;
   delete userObject.resetPasswordExpire;
