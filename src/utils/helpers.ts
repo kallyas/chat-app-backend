@@ -8,7 +8,7 @@ export const generateResetToken = (): { token: string; hashedToken: string } => 
   return { token: resetToken, hashedToken };
 };
 
-export const sanitizeUser = (user: any) => {
+export const sanitizeUser = (user: Record<string, unknown>) => {
   const sanitizedUser = { ...user };
   delete sanitizedUser.password;
   delete sanitizedUser.resetPasswordToken;
@@ -28,18 +28,18 @@ export const toObjectId = (id: string): mongoose.Types.ObjectId => {
   return new mongoose.Types.ObjectId(id);
 };
 
-export const formatError = (error: any): string => {
+export const formatError = (error: Record<string, unknown>): string => {
   if (error.name === 'ValidationError') {
-    const errors = Object.values(error.errors).map((err: any) => err.message);
+    const errors = Object.values(error.errors as Record<string, { message: string }>).map((err) => err.message);
     return errors.join('. ');
   }
   
   if (error.code === 11000) {
-    const field = Object.keys(error.keyValue)[0];
+    const field = Object.keys(error.keyValue as Record<string, unknown>)[0];
     return `${field} already exists`;
   }
   
-  return error.message || 'An error occurred';
+  return (error.message as string) || 'An error occurred';
 };
 
 export const getPaginationInfo = (page: number, limit: number, total: number) => {
