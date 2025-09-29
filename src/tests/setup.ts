@@ -1,10 +1,11 @@
 import { MongoMemoryServer } from 'mongodb-memory-server';
 import mongoose from 'mongoose';
 
-// Set test environment variables
+// Set test environment variables before any other imports
 process.env.NODE_ENV = 'test';
 process.env.JWT_SECRET = 'test-jwt-secret-key-for-testing';
 process.env.JWT_EXPIRE = '1h';
+process.env.MONGODB_URI = 'mongodb://localhost:27017/test'; // Placeholder for config validation
 
 let mongoServer: MongoMemoryServer;
 
