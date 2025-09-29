@@ -14,7 +14,7 @@ export interface JoinRoomData {
   roomId: string;
 }
 
-export interface SendMessageData {
+export interface SocketSendMessageData {
   roomId: string;
   content: string;
   type?: 'text' | 'image' | 'file';
@@ -103,7 +103,7 @@ export const setupChatEvents = (io: Server, socket: AuthenticatedSocket) => {
   });
 
   // Send a message
-  socket.on('sendMessage', async (data: SendMessageData) => {
+  socket.on('sendMessage', async (data: SocketSendMessageData) => {
     try {
       const { error, value } = sendMessageSchema.validate(data);
       if (error) {

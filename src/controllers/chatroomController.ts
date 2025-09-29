@@ -1,7 +1,9 @@
 import { Response } from 'express';
 import { ChatService } from '@/services';
-import { catchAsync, AppError, AuthRequest } from '@/middleware';
+import { catchAsync, AppError } from '@/middleware';
 import { createChatRoomSchema, objectIdSchema } from '@/utils';
+import { ChatRoomType } from '@/models';
+import type { AuthRequest, CreateChatRoomData } from '@/types';
 
 export const createChatRoom = catchAsync(async (req: AuthRequest, res: Response) => {
   if (!req.user) {
@@ -14,9 +16,16 @@ export const createChatRoom = catchAsync(async (req: AuthRequest, res: Response)
     throw new AppError(validation.error.details[0].message, 400);
   }
 
-  const chatRoomData = {
-    ...(validation.value as { name?: string; type: string; participants: string[]; description?: string }),
-    type: validation.value.type as import('@/models').ChatRoomType,
+  const validatedData = validation.value as { 
+    name?: string; 
+    type: string; 
+    participants: string[]; 
+    description?: string; 
+  };
+
+  const chatRoomData: CreateChatRoomData = {
+    ...validatedData,
+    type: validatedData.type as ChatRoomType,
     createdBy: req.user._id.toString(),
   };
 

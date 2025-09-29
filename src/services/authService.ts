@@ -2,19 +2,8 @@ import { User, IUser } from '@/models';
 import { AppError } from '@/middleware';
 import { generateResetToken, sanitizeUser } from '@/utils';
 import { logger } from '@/config/logger';
+import { RegisterUserData, LoginUserData } from '@/types';
 import crypto from 'crypto';
-
-export interface RegisterUserData {
-  email: string;
-  username: string;
-  password: string;
-  profilePic?: string;
-}
-
-export interface LoginUserData {
-  email: string;
-  password: string;
-}
 
 export class AuthService {
   static async registerUser(userData: RegisterUserData): Promise<IUser> {

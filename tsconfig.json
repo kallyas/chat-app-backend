@@ -33,7 +33,8 @@
       "@/sockets/*": ["sockets/*"],
       "@/middleware/*": ["middleware/*"],
       "@/utils/*": ["utils/*"],
-      "@/tests/*": ["tests/*"]
+      "@/tests/*": ["tests/*"],
+      "@/types": ["types/index"]
     }
   },
   "include": [

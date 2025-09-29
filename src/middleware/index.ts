@@ -3,9 +3,7 @@ export {
   optionalAuth, 
   requireRoles, 
   generateAccessToken, 
-  generateRefreshToken,
-  AuthRequest,
-  JWTPayload 
+  generateRefreshToken
 } from './auth';
 
 export { 

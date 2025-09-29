@@ -3,35 +3,7 @@ import { ChatRoom, IChatRoom, ChatRoomType, Message, IMessage, MessageType, User
 import { AppError } from '@/middleware';
 import { toObjectId, getPaginationInfo } from '@/utils';
 import { logger } from '@/config/logger';
-
-export interface CreateChatRoomData {
-  name?: string | undefined;
-  type: ChatRoomType;
-  participants: string[];
-  description?: string | undefined;
-  createdBy: string;
-}
-
-export interface SendMessageData {
-  chatRoomId: string;
-  senderId: string;
-  content: string;
-  type?: MessageType | undefined;
-  replyTo?: string | undefined;
-  metadata?: {
-  fileName?: string;
-  fileSize?: number;
-  mimeType?: string;
-  imageWidth?: number;
-  imageHeight?: number;
-} | undefined;
-}
-
-export interface GetMessagesQuery {
-  page?: number;
-  limit?: number;
-  before?: string; // message ID
-}
+import { CreateChatRoomData, SendMessageData, GetMessagesQuery } from '@/types';
 
 export class ChatService {
   static async createChatRoom(roomData: CreateChatRoomData): Promise<IChatRoom> {

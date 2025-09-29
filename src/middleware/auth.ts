@@ -1,20 +1,9 @@
-import { Request, Response, NextFunction } from 'express';
+import { Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import { User, IUser } from '@/models';
 import { config } from '@/config/environment';
 import { logger } from '@/config/logger';
-
-export interface AuthRequest extends Request {
-  user?: IUser;
-}
-
-export interface JWTPayload {
-  id: string;
-  email: string;
-  username: string;
-  iat?: number;
-  exp?: number;
-}
+import { AuthRequest, JWTPayload } from '@/types';
 
 export const authenticateToken = async (
   req: AuthRequest,
