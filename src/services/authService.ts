@@ -113,7 +113,7 @@ export class AuthService {
 
       Object.keys(updateData).forEach(key => {
         if (allowedUpdates.includes(key)) {
-          (updates as any)[key] = (updateData as any)[key];
+          (updates as Record<string, any>)[key] = (updateData as Record<string, any>)[key];
         }
       });
 
@@ -141,10 +141,14 @@ export class AuthService {
       logger.info(`User profile updated: ${user.email}`);
 
       return user;
-    } catch (error) {
+    } catch (error: any) {
       logger.error('Error in updateUserProfile:', error);
       if (error instanceof AppError) {
         throw error;
+      }
+      if (error.name === 'ValidationError') {
+        const errors = Object.values(error.errors).map((el: any) => el.message);
+        throw new AppError(`Invalid input data: ${errors.join('. ')}`, 400);
       }
       throw new AppError('Failed to update profile', 500);
     }
@@ -189,8 +193,8 @@ export class AuthService {
       }
 
       user.password = newPassword;
-      user.resetPasswordToken = undefined as any;
-      user.resetPasswordExpire = undefined as any;
+      user.resetPasswordToken = undefined;
+      user.resetPasswordExpire = undefined;
       await user.save();
 
       logger.info(`Password reset completed for: ${user.email}`);
@@ -205,7 +209,7 @@ export class AuthService {
 
   static async searchUsers(query: string, currentUserId: string, type: 'username' | 'email' | 'both' = 'both'): Promise<IUser[]> {
     try {
-      const searchConditions: any = {
+      const searchConditions: Record<string, any> = {
         _id: { $ne: currentUserId },
       };
 
