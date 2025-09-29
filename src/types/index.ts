@@ -128,7 +128,7 @@ export interface GetMessagesQuery {
 /**
  * Standard API success response structure
  */
-export interface ApiResponse<T = any> {
+export interface ApiResponse<T = unknown> {
   /** Indicates if the request was successful */
   success: true;
   /** Human-readable success message */

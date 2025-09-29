@@ -16,9 +16,16 @@ export const createChatRoom = catchAsync(async (req: AuthRequest, res: Response)
     throw new AppError(validation.error.details[0].message, 400);
   }
 
+  const validatedData = validation.value as { 
+    name?: string; 
+    type: string; 
+    participants: string[]; 
+    description?: string; 
+  };
+
   const chatRoomData: CreateChatRoomData = {
-    ...(validation.value as { name?: string; type: string; participants: string[]; description?: string }),
-    type: validation.value.type as ChatRoomType,
+    ...validatedData,
+    type: validatedData.type as ChatRoomType,
     createdBy: req.user._id.toString(),
   };
 

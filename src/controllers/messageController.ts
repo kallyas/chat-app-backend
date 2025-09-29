@@ -2,7 +2,6 @@ import { Response } from 'express';
 import { ChatService } from '@/services';
 import { catchAsync, AppError } from '@/middleware';
 import { sendMessageSchema, paginationSchema, objectIdSchema } from '@/utils';
-import { MessageType } from '@/models';
 import type { AuthRequest, SendMessageData, GetMessagesQuery } from '@/types';
 
 export const sendMessage = catchAsync(async (req: AuthRequest, res: Response) => {
