@@ -1,4 +1,4 @@
-import { Request, Response } from 'express';
+import { Response } from 'express';
 import { ChatService } from '@/services';
 import { catchAsync, AppError, AuthRequest } from '@/middleware';
 import { createChatRoomSchema, objectIdSchema } from '@/utils';
@@ -8,14 +8,15 @@ export const createChatRoom = catchAsync(async (req: AuthRequest, res: Response)
     throw new AppError('User not authenticated', 401);
   }
 
-  const { error, value } = createChatRoomSchema.validate(req.body);
+  const validation = createChatRoomSchema.validate(req.body);
   
-  if (error) {
-    throw new AppError(error.details[0].message, 400);
+  if (validation.error) {
+    throw new AppError(validation.error.details[0].message, 400);
   }
 
   const chatRoomData = {
-    ...value,
+    ...(validation.value as { name?: string; type: string; participants: string[]; description?: string }),
+    type: validation.value.type as import('@/models').ChatRoomType,
     createdBy: req.user._id.toString(),
   };
 
@@ -123,7 +124,7 @@ export const updateChatRoom = catchAsync(async (req: AuthRequest, res: Response)
     throw new AppError('Invalid room ID format', 400);
   }
 
-  const chatRoom = await ChatService.updateChatRoom(roomId, req.user._id.toString(), req.body);
+  const chatRoom = await ChatService.updateChatRoom(roomId, req.user._id.toString(), req.body as Partial<import('@/models').IChatRoom>);
 
   res.status(200).json({
     success: true,
