@@ -120,6 +120,8 @@ export const searchSchema = Joi.object({
       'any.required': 'Search query is required',
     }),
   type: Joi.string().valid('username', 'email', 'both').default('both'),
+  page: Joi.number().integer().min(1).default(1).optional(),
+  limit: Joi.number().integer().min(1).max(100).default(20).optional(),
 });
 
 export const resetPasswordSchema = Joi.object({
