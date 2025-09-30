@@ -16,6 +16,7 @@ class SocketConfig {
       IO.OptionBuilder()
         .setTransports(['websocket'])
         .enableAutoConnect()
+        .setAuth({'token': token})
         .setExtraHeaders({'authorization': 'Bearer $token'})
         .build()
     );
