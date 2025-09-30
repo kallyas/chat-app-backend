@@ -105,7 +105,18 @@ export const setupChatEvents = (io: Server, socket: AuthenticatedSocket) => {
   // Send a message
   socket.on('sendMessage', async (data: SocketSendMessageData) => {
     try {
-      const { error, value } = sendMessageSchema.validate(data);
+      // Extract roomId separately for validation
+      const { roomId, ...messageContent } = data;
+      
+      // Validate room ID format
+      const roomValidation = objectIdSchema.validate(roomId);
+      if (roomValidation.error) {
+        socket.emit('error', { message: 'Invalid room ID format' });
+        return;
+      }
+
+      // Validate message content
+      const { error, value } = sendMessageSchema.validate(messageContent);
       if (error) {
         socket.emit('error', { message: error.details[0].message });
         return;
@@ -113,18 +124,19 @@ export const setupChatEvents = (io: Server, socket: AuthenticatedSocket) => {
 
       const messageData = {
         ...value,
+        chatRoomId: roomId,
         senderId: socket.userId!,
       };
 
       const message = await ChatService.sendMessage(messageData);
 
       // Emit message to all users in the room
-      io.to(value.roomId).emit('newMessage', {
+      io.to(roomId).emit('newMessage', {
         message,
         timestamp: new Date(),
       });
 
-      logger.info(`Message sent by ${socket.username} in room ${value.roomId}`);
+      logger.info(`Message sent by ${socket.username} in room ${roomId}`);
     } catch (error) {
       logger.error('Error in sendMessage event:', error);
       socket.emit('error', { message: 'Failed to send message' });
