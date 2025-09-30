@@ -1,3 +1,5 @@
+import 'package:flutter/material.dart';
+
 class User {
   final String id;
   final String username;
@@ -21,16 +23,20 @@ class User {
 
   factory User.fromJson(Map<String, dynamic> json) {
     return User(
-      id: json['_id'] ?? json['id'],
-      username: json['username'],
-      email: json['email'],
-      profilePic: json['profilePic'],
+      id: json['_id']?.toString() ?? json['id']?.toString() ?? '',
+      username: json['username']?.toString() ?? '',
+      email: json['email']?.toString() ?? '',
+      profilePic: json['profilePic']?.toString(),
       isOnline: json['isOnline'] ?? false,
       lastSeen: json['lastSeen'] != null 
-          ? DateTime.parse(json['lastSeen']) 
+          ? DateTime.tryParse(json['lastSeen'].toString()) 
           : null,
-      createdAt: DateTime.parse(json['createdAt']),
-      updatedAt: DateTime.parse(json['updatedAt']),
+      createdAt: json['createdAt'] != null 
+          ? DateTime.tryParse(json['createdAt'].toString()) ?? DateTime.now()
+          : DateTime.now(),
+      updatedAt: json['updatedAt'] != null 
+          ? DateTime.tryParse(json['updatedAt'].toString()) ?? DateTime.now()
+          : DateTime.now(),
     );
   }
 
