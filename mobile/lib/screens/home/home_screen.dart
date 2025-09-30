@@ -39,8 +39,13 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   }
 
   Future<void> _initializeChat() async {
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
     final chatProvider = Provider.of<ChatProvider>(context, listen: false);
-    await chatProvider.initialize();
+    
+    // Only initialize chat if user is authenticated
+    if (authProvider.isAuthenticated) {
+      await chatProvider.initialize();
+    }
   }
 
   @override
