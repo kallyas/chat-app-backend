@@ -41,7 +41,7 @@ class ThemeProvider extends ChangeNotifier {
         cardTheme: CardTheme(
           elevation: 2,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.all(Radius.circular(12)),
           ),
         ),
         elevatedButtonTheme: ElevatedButtonThemeData(
@@ -90,7 +90,7 @@ class ThemeProvider extends ChangeNotifier {
         cardTheme: CardTheme(
           elevation: 2,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.all(Radius.circular(12)),
           ),
         ),
         elevatedButtonTheme: ElevatedButtonThemeData(
