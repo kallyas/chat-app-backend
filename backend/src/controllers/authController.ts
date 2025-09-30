@@ -166,7 +166,7 @@ export const searchUsers = catchAsync(async (req: AuthRequest, res: Response) =>
     throw new AppError('User not authenticated', 401);
   }
 
-  const { query, type = 'both' } = req.query;
+  const { query, type = 'both', page = '1', limit = '20' } = req.query;
 
   if (!query || typeof query !== 'string') {
     throw new AppError('Search query is required', 400);
@@ -176,17 +176,38 @@ export const searchUsers = catchAsync(async (req: AuthRequest, res: Response) =>
     throw new AppError('Search query must be at least 1 character', 400);
   }
 
-  const users = await AuthService.searchUsers(
+  // Parse and validate pagination parameters
+  const pageNum = parseInt(page as string) || 1;
+  const limitNum = Math.min(parseInt(limit as string) || 20, 100); // Max 100 per page
+
+  if (pageNum < 1) {
+    throw new AppError('Page must be greater than 0', 400);
+  }
+
+  if (limitNum < 1) {
+    throw new AppError('Limit must be greater than 0', 400);
+  }
+
+  const result = await AuthService.searchUsers(
     query,
     req.user._id.toString(),
-    type as 'username' | 'email' | 'both'
+    type as 'username' | 'email' | 'both',
+    pageNum,
+    limitNum
   );
 
   res.status(200).json({
     success: true,
     data: {
-      users,
-      count: users.length,
+      users: result.users,
+      pagination: {
+        page: pageNum,
+        limit: limitNum,
+        total: result.total,
+        totalPages: result.totalPages,
+        hasNext: result.hasNext,
+        hasPrev: result.hasPrev,
+      },
     },
   });
 });
@@ -196,13 +217,34 @@ export const getOnlineUsers = catchAsync(async (req: AuthRequest, res: Response)
     throw new AppError('User not authenticated', 401);
   }
 
-  const users = await AuthService.getOnlineUsers();
+  const { page = '1', limit = '20' } = req.query;
+
+  // Parse and validate pagination parameters
+  const pageNum = parseInt(page as string) || 1;
+  const limitNum = Math.min(parseInt(limit as string) || 20, 100); // Max 100 per page
+
+  if (pageNum < 1) {
+    throw new AppError('Page must be greater than 0', 400);
+  }
+
+  if (limitNum < 1) {
+    throw new AppError('Limit must be greater than 0', 400);
+  }
+
+  const result = await AuthService.getOnlineUsers(pageNum, limitNum);
 
   res.status(200).json({
     success: true,
     data: {
-      users,
-      count: users.length,
+      users: result.users,
+      pagination: {
+        page: pageNum,
+        limit: limitNum,
+        total: result.total,
+        totalPages: result.totalPages,
+        hasNext: result.hasNext,
+        hasPrev: result.hasPrev,
+      },
     },
   });
 });
