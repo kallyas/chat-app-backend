@@ -229,15 +229,9 @@ class AuthService {
       final response = await getCurrentUser();
       return response.success;
     } catch (e) {
-      // If validation fails, try to refresh token
-      final refreshResponse = await refreshToken();
-      if (refreshResponse.success) {
-        // Try getting user again after refresh
-        final userResponse = await getCurrentUser();
-        return userResponse.success;
-      }
-      
-      // If refresh also fails, clear auth data
+      // Since refresh token is not implemented in backend,
+      // we'll just clear auth data if validation fails
+      print('Token validation failed: $e');
       await StorageService.clearAuthTokens();
       return false;
     }
@@ -245,8 +239,10 @@ class AuthService {
 
   // Helper method to save auth data
   Future<void> _saveAuthData(Map<String, dynamic> authData) async {
-    final token = authData['token'] as String;
-    final refreshToken = authData['refreshToken'] as String;
+    // Backend returns tokens nested under 'tokens' object
+    final tokens = authData['tokens'] as Map<String, dynamic>;
+    final token = tokens['access'] as String;
+    final refreshToken = tokens['refresh'] as String;
     final userData = authData['user'] as Map<String, dynamic>;
 
     await Future.wait([
