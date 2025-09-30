@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
@@ -20,11 +21,14 @@ class ChatListScreen extends StatefulWidget {
 class _ChatListScreenState extends State<ChatListScreen> {
   final TextEditingController _searchController = TextEditingController();
   bool _isSearching = false;
+  bool _isSearchLoading = false;
   List<User> _searchResults = [];
+  Timer? _searchDebounceTimer;
 
   @override
   void dispose() {
     _searchController.dispose();
+    _searchDebounceTimer?.cancel();
     super.dispose();
   }
 
@@ -33,10 +37,14 @@ class _ChatListScreenState extends State<ChatListScreen> {
     await chatProvider.loadChatRooms(refresh: true);
   }
 
-  Future<void> _handleSearch(String query) async {
+  void _handleSearch(String query) {
+    // Cancel previous search timer
+    _searchDebounceTimer?.cancel();
+
     if (query.isEmpty) {
       setState(() {
         _isSearching = false;
+        _isSearchLoading = false;
         _searchResults.clear();
       });
       return;
@@ -44,49 +52,101 @@ class _ChatListScreenState extends State<ChatListScreen> {
 
     setState(() {
       _isSearching = true;
+      _isSearchLoading = true;
     });
 
-    final chatProvider = Provider.of<ChatProvider>(context, listen: false);
-    final results = await chatProvider.searchUsers(query);
-    
-    setState(() {
-      _searchResults = results;
+    // Debounce search for 500ms
+    _searchDebounceTimer = Timer(const Duration(milliseconds: 500), () {
+      _performSearch(query);
     });
+  }
+
+  Future<void> _performSearch(String query) async {
+    try {
+      final chatProvider = Provider.of<ChatProvider>(context, listen: false);
+      final results = await chatProvider.searchUsers(query);
+      
+      if (mounted) {
+        setState(() {
+          _searchResults = results;
+          _isSearchLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isSearchLoading = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Search failed: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 
   Future<void> _startChat(User user) async {
     final chatProvider = Provider.of<ChatProvider>(context, listen: false);
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
     
-    // Check if private chat already exists
-    final existingRoom = chatProvider.chatRooms.firstWhere(
-      (room) => room.type == ChatRoomType.private &&
-          room.participants.any((p) => p.id == user.id) &&
-          room.participants.any((p) => p.id == authProvider.currentUserId),
-      orElse: () => throw Exception('Not found'),
-    );
+    try {
+      // Check if private chat already exists
+      ChatRoom? existingRoom;
+      try {
+        existingRoom = chatProvider.chatRooms.firstWhere(
+          (room) => room.type == ChatRoomType.private &&
+              room.participants.any((p) => p.id == user.id) &&
+              room.participants.any((p) => p.id == authProvider.currentUserId),
+        );
+      } catch (e) {
+        // No existing room found, will create new one
+        existingRoom = null;
+      }
 
-    ChatRoom? chatRoom;
-    if (existingRoom.id.isNotEmpty) {
-      chatRoom = existingRoom;
-    } else {
-      chatRoom = await chatProvider.createPrivateChat(user.id);
-    }
+      ChatRoom? chatRoom;
+      if (existingRoom != null) {
+        chatRoom = existingRoom;
+      } else {
+        // Show loading while creating chat
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Creating chat...'),
+              duration: Duration(seconds: 1),
+            ),
+          );
+        }
+        chatRoom = await chatProvider.createPrivateChat(user.id);
+      }
 
-    if (chatRoom != null && mounted) {
-      _clearSearch();
-      Navigator.of(context).push(
-        MaterialPageRoute(
-          builder: (context) => ChatScreen(chatRoom: chatRoom!),
-        ),
-      );
+      if (chatRoom != null && mounted) {
+        _clearSearch();
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (context) => ChatScreen(chatRoom: chatRoom!),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to start chat: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 
   void _clearSearch() {
     _searchController.clear();
+    _searchDebounceTimer?.cancel();
     setState(() {
       _isSearching = false;
+      _isSearchLoading = false;
       _searchResults.clear();
     });
   }
@@ -202,7 +262,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
   Widget _buildChatList() {
     return Consumer2<ChatProvider, ThemeProvider>(
       builder: (context, chatProvider, themeProvider, child) {
-        if (chatProvider.isLoading && chatProvider.chatRooms.isEmpty) {
+        if ((chatProvider.isLoading || chatProvider.isLoadingChatRooms) && chatProvider.chatRooms.isEmpty) {
           return const Center(
             child: CircularProgressIndicator(),
           );
@@ -215,8 +275,28 @@ class _ChatListScreenState extends State<ChatListScreen> {
         return RefreshIndicator(
           onRefresh: _handleRefresh,
           child: ListView.builder(
-            itemCount: chatProvider.chatRooms.length,
+            itemCount: chatProvider.chatRooms.length + (chatProvider.hasMoreChatRooms ? 1 : 0),
             itemBuilder: (context, index) {
+              if (index == chatProvider.chatRooms.length) {
+                // Load more indicator
+                if (chatProvider.isLoadingChatRooms) {
+                  return const Padding(
+                    padding: EdgeInsets.all(AppConstants.defaultPadding),
+                    child: Center(child: CircularProgressIndicator()),
+                  );
+                } else if (chatProvider.hasMoreChatRooms) {
+                  // Trigger load more when this item is built
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    chatProvider.loadMoreChatRooms();
+                  });
+                  return const Padding(
+                    padding: EdgeInsets.all(AppConstants.defaultPadding),
+                    child: Center(child: CircularProgressIndicator()),
+                  );
+                }
+                return const SizedBox.shrink();
+              }
+              
               final chatRoom = chatProvider.chatRooms[index];
               return _buildChatListItem(chatRoom);
             },
@@ -229,6 +309,21 @@ class _ChatListScreenState extends State<ChatListScreen> {
   Widget _buildSearchResults() {
     return Consumer<ThemeProvider>(
       builder: (context, themeProvider, child) {
+        // Show loading indicator when searching
+        if (_isSearchLoading) {
+          return const Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                CircularProgressIndicator(),
+                SizedBox(height: AppConstants.defaultPadding),
+                Text('Searching users...'),
+              ],
+            ),
+          );
+        }
+
+        // Show no results message
         if (_searchResults.isEmpty && _searchController.text.isNotEmpty) {
           return Center(
             child: Column(
@@ -242,6 +337,30 @@ class _ChatListScreenState extends State<ChatListScreen> {
                 const SizedBox(height: AppConstants.defaultPadding),
                 Text(
                   'No users found',
+                  style: TextStyle(
+                    color: themeProvider.secondaryTextColor,
+                    fontSize: 16,
+                  ),
+                ),
+              ],
+            ),
+          );
+        }
+
+        // Show search prompt when no query entered
+        if (_searchController.text.isEmpty) {
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.search,
+                  size: 64,
+                  color: themeProvider.secondaryTextColor,
+                ),
+                const SizedBox(height: AppConstants.defaultPadding),
+                Text(
+                  'Start typing to search users',
                   style: TextStyle(
                     color: themeProvider.secondaryTextColor,
                     fontSize: 16,
