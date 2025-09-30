@@ -22,7 +22,7 @@ class ChatService {
       final response = await _apiService.get<PaginatedResponse<User>>(
         ApiConfig.searchUsers,
         queryParameters: {
-          'q': query,
+          'query': query,
           'page': page,
           'limit': limit,
         },
@@ -42,13 +42,22 @@ class ChatService {
     }
   }
 
-  Future<ApiResponse<List<User>>> getOnlineUsers() async {
+  Future<ApiResponse<PaginatedResponse<User>>> getOnlineUsers({
+    int page = 1,
+    int limit = 20,
+  }) async {
     try {
-      final response = await _apiService.get<List<User>>(
+      final response = await _apiService.get<PaginatedResponse<User>>(
         ApiConfig.onlineUsers,
-        fromJson: (json) => (json['users'] as List<dynamic>)
-            .map((user) => User.fromJson(user))
-            .toList(),
+        queryParameters: {
+          'page': page,
+          'limit': limit,
+        },
+        fromJson: (json) => PaginatedResponse.fromJson(
+          json,
+          (item) => User.fromJson(item),
+          'users',
+        ),
       );
 
       return response;
