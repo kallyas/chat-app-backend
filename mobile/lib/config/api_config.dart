@@ -1,7 +1,7 @@
 class ApiConfig {
   // Base URLs - Update these for production
   static const String baseUrl = 'http://localhost:3000/api';
-  static const String socketUrl = 'http://localhost:3000';
+  static const String socketUrl = 'ws://localhost:3000';
   
   // API Endpoints
   static const String auth = '/auth';
