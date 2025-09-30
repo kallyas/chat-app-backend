@@ -34,8 +34,8 @@ class ChatRoom {
 
   factory ChatRoom.fromJson(Map<String, dynamic> json) {
     return ChatRoom(
-      id: json['_id'] ?? json['id'],
-      name: json['name'],
+      id: json['_id']?.toString() ?? json['id']?.toString() ?? '',
+      name: json['name']?.toString(),
       type: ChatRoomType.values.firstWhere(
         (e) => e.name == json['type'],
         orElse: () => ChatRoomType.private,
@@ -43,17 +43,33 @@ class ChatRoom {
       participants: (json['participants'] as List<dynamic>?)
           ?.map((p) => User.fromJson(p is Map<String, dynamic> ? p : {'_id': p.toString(), 'username': '', 'email': '', 'isOnline': false, 'createdAt': DateTime.now().toIso8601String(), 'updatedAt': DateTime.now().toIso8601String()}))
           .toList() ?? [],
-      description: json['description'],
-      avatar: json['avatar'],
-      createdBy: json['createdBy'] ?? json['creator'] ?? '',
+      description: json['description']?.toString(),
+      avatar: json['avatar']?.toString(),
+      createdBy: _extractCreatedBy(json),
       isActive: json['isActive'] ?? true,
       lastMessage: json['lastMessage'] != null 
           ? Message.fromJson(json['lastMessage'])
           : null,
       unreadCount: json['unreadCount'] ?? 0,
-      createdAt: DateTime.parse(json['createdAt']),
-      updatedAt: DateTime.parse(json['updatedAt']),
+      createdAt: _parseDateTime(json['createdAt']),
+      updatedAt: _parseDateTime(json['updatedAt']),
     );
+  }
+
+  static String _extractCreatedBy(Map<String, dynamic> json) {
+    final createdBy = json['createdBy'] ?? json['creator'];
+    if (createdBy is Map<String, dynamic>) {
+      return createdBy['_id']?.toString() ?? createdBy['id']?.toString() ?? '';
+    }
+    return createdBy?.toString() ?? '';
+  }
+
+  static DateTime _parseDateTime(dynamic dateValue) {
+    if (dateValue == null) return DateTime.now();
+    if (dateValue is String) {
+      return DateTime.tryParse(dateValue) ?? DateTime.now();
+    }
+    return DateTime.now();
   }
 
   Map<String, dynamic> toJson() {
