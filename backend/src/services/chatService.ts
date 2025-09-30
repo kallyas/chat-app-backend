@@ -64,18 +64,41 @@ export class ChatService {
     }
   }
 
-  static async getUserChatRooms(userId: string): Promise<IChatRoom[]> {
+  static async getUserChatRooms(
+    userId: string,
+    page: number = 1,
+    limit: number = 20
+  ): Promise<{ chatRooms: IChatRoom[], total: number, totalPages: number, hasNext: boolean, hasPrev: boolean }> {
     try {
-      const chatRooms = await ChatRoom.find({
+      const skip = (page - 1) * limit;
+      
+      const query = {
         participants: toObjectId(userId),
         isActive: true,
-      })
-        .populate('participants', 'username email profilePic isOnline lastSeen')
-        .populate('createdBy', 'username email profilePic')
-        .populate('lastMessage.sender', 'username profilePic')
-        .sort({ 'lastMessage.timestamp': -1, updatedAt: -1 });
+      };
 
-      return chatRooms;
+      const [chatRooms, total] = await Promise.all([
+        ChatRoom.find(query)
+          .populate('participants', 'username email profilePic isOnline lastSeen')
+          .populate('createdBy', 'username email profilePic')
+          .populate('lastMessage.sender', 'username profilePic')
+          .sort({ 'lastMessage.timestamp': -1, updatedAt: -1 })
+          .skip(skip)
+          .limit(limit),
+        ChatRoom.countDocuments(query)
+      ]);
+
+      const totalPages = Math.ceil(total / limit);
+      const hasNext = page < totalPages;
+      const hasPrev = page > 1;
+
+      return {
+        chatRooms,
+        total,
+        totalPages,
+        hasNext,
+        hasPrev
+      };
     } catch (error) {
       logger.error('Error in getUserChatRooms:', error);
       throw new AppError('Failed to get user chat rooms', 500);
