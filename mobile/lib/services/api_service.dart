@@ -107,7 +107,7 @@ class ApiService {
     String fieldName = 'file',
     Map<String, dynamic>? additionalData,
     T Function(dynamic)? fromJson,
-    ProgressCallback? onProgress,
+    Function(int, int)? onProgress,
   }) async {
     try {
       final formData = FormData.fromMap({
@@ -130,7 +130,7 @@ class ApiService {
   Future<ApiResponse<String>> downloadFile(
     String endpoint,
     String savePath, {
-    ProgressCallback? onProgress,
+    Function(int, int)? onProgress,
   }) async {
     try {
       await _dio.download(

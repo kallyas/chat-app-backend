@@ -1,8 +1,5 @@
 import 'package:socket_io_client/socket_io_client.dart' as IO;
 import '../config/socket_config.dart';
-import '../models/message.dart';
-import '../models/chat_room.dart';
-import '../models/user.dart';
 import 'storage_service.dart';
 
 class SocketService {

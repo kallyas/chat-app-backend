@@ -331,7 +331,7 @@ class ChatService {
     required String filePath,
     required String roomId,
     String? fileName,
-    ProgressCallback? onProgress,
+    Function(int, int)? onProgress,
   }) async {
     try {
       // Note: This endpoint might need to be adjusted based on your backend implementation
@@ -357,7 +357,7 @@ class ChatService {
   Future<ApiResponse<String>> downloadFile({
     required String fileUrl,
     required String savePath,
-    ProgressCallback? onProgress,
+    Function(int, int)? onProgress,
   }) async {
     try {
       final response = await _apiService.downloadFile(

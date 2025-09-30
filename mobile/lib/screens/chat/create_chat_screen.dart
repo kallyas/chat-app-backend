@@ -22,7 +22,6 @@ class _CreateChatScreenState extends State<CreateChatScreen> {
   bool _isGroupChat = false;
   List<User> _searchResults = [];
   List<User> _selectedUsers = [];
-  bool _isSearching = false;
 
   @override
   void dispose() {
@@ -35,15 +34,10 @@ class _CreateChatScreenState extends State<CreateChatScreen> {
   Future<void> _handleSearch(String query) async {
     if (query.isEmpty) {
       setState(() {
-        _isSearching = false;
         _searchResults.clear();
       });
       return;
     }
-
-    setState(() {
-      _isSearching = true;
-    });
 
     final chatProvider = Provider.of<ChatProvider>(context, listen: false);
     final results = await chatProvider.searchUsers(query);
