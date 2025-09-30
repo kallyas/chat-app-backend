@@ -24,16 +24,16 @@ jobs:
         cache: 'yarn'
 
     - name: Install dependencies
-      run: yarn install --frozen-lockfile
+      run: cd backend && yarn install --frozen-lockfile
 
     # - name: Run linter
     #   run: ./node_modules/.bin/eslint . --ext .ts,.tsx
 
     - name: Run tests
-      run: yarn test
+      run: cd backend && yarn test
 
     - name: Run tests with coverage
-      run: yarn test:coverage
+      run: cd backend && yarn test:coverage
 
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v3
