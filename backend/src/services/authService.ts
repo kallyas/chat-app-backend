@@ -196,7 +196,13 @@ export class AuthService {
     }
   }
 
-  static async searchUsers(query: string, currentUserId: string, type: 'username' | 'email' | 'both' = 'both'): Promise<IUser[]> {
+  static async searchUsers(
+    query: string, 
+    currentUserId: string, 
+    type: 'username' | 'email' | 'both' = 'both',
+    page: number = 1,
+    limit: number = 20
+  ): Promise<{ users: IUser[], total: number, totalPages: number, hasNext: boolean, hasPrev: boolean }> {
     try {
       const searchConditions: Record<string, any> = {
         _id: { $ne: currentUserId },
@@ -213,11 +219,30 @@ export class AuthService {
         ];
       }
 
-      const users = await User.find(searchConditions)
-        .select('username email profilePic isOnline lastSeen')
-        .limit(10);
+      // Calculate pagination
+      const skip = (page - 1) * limit;
+      
+      // Get total count and users in parallel
+      const [users, total] = await Promise.all([
+        User.find(searchConditions)
+          .select('username email profilePic isOnline lastSeen createdAt updatedAt')
+          .skip(skip)
+          .limit(limit)
+          .sort({ username: 1 }),
+        User.countDocuments(searchConditions)
+      ]);
 
-      return users;
+      const totalPages = Math.ceil(total / limit);
+      const hasNext = page < totalPages;
+      const hasPrev = page > 1;
+
+      return {
+        users,
+        total,
+        totalPages,
+        hasNext,
+        hasPrev
+      };
     } catch (error) {
       logger.error('Error in searchUsers:', error);
       throw new AppError('Failed to search users', 500);
@@ -236,12 +261,33 @@ export class AuthService {
     }
   }
 
-  static async getOnlineUsers(): Promise<IUser[]> {
+  static async getOnlineUsers(
+    page: number = 1,
+    limit: number = 20
+  ): Promise<{ users: IUser[], total: number, totalPages: number, hasNext: boolean, hasPrev: boolean }> {
     try {
-      const users = await User.find({ isOnline: true })
-        .select('username email profilePic isOnline lastSeen');
+      const skip = (page - 1) * limit;
+      
+      const [users, total] = await Promise.all([
+        User.find({ isOnline: true })
+          .select('username email profilePic isOnline lastSeen createdAt updatedAt')
+          .skip(skip)
+          .limit(limit)
+          .sort({ lastSeen: -1 }),
+        User.countDocuments({ isOnline: true })
+      ]);
 
-      return users;
+      const totalPages = Math.ceil(total / limit);
+      const hasNext = page < totalPages;
+      const hasPrev = page > 1;
+
+      return {
+        users,
+        total,
+        totalPages,
+        hasNext,
+        hasPrev
+      };
     } catch (error) {
       logger.error('Error in getOnlineUsers:', error);
       throw new AppError('Failed to get online users', 500);
