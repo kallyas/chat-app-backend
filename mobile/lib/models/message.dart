@@ -100,15 +100,15 @@ class Message {
 
   factory Message.fromJson(Map<String, dynamic> json) {
     return Message(
-      id: json['_id'] ?? json['id'],
-      chatRoomId: json['chatRoomId'],
-      senderId: json['senderId'] ?? json['sender']?['_id'] ?? json['sender']?['id'],
+      id: json['_id']?.toString() ?? json['id']?.toString() ?? '',
+      chatRoomId: json['chatRoomId']?.toString() ?? '',
+      senderId: json['senderId']?.toString() ?? json['sender']?['_id']?.toString() ?? json['sender']?['id']?.toString() ?? '',
       sender: json['sender'] is Map<String, dynamic> 
           ? User.fromJson(json['sender'])
           : null,
-      content: json['content'],
+      content: json['content']?.toString() ?? '',
       type: MessageType.values.firstWhere(
-        (e) => e.name == json['type'],
+        (e) => e.name == (json['type'] ?? json['messageType']),
         orElse: () => MessageType.text,
       ),
       status: MessageStatus.values.firstWhere(
@@ -120,20 +120,28 @@ class Message {
           .toList() ?? [],
       edited: json['edited'] ?? false,
       editedAt: json['editedAt'] != null 
-          ? DateTime.parse(json['editedAt'])
+          ? DateTime.tryParse(json['editedAt'].toString())
           : null,
       replyToId: json['replyTo'] is String 
           ? json['replyTo'] 
-          : json['replyTo']?['_id'],
+          : json['replyTo']?['_id']?.toString(),
       replyTo: json['replyTo'] is Map<String, dynamic>
           ? Message.fromJson(json['replyTo'])
           : null,
       metadata: json['metadata'] != null 
           ? MessageMetadata.fromJson(json['metadata'])
           : null,
-      createdAt: DateTime.parse(json['createdAt']),
-      updatedAt: DateTime.parse(json['updatedAt']),
+      createdAt: _parseDateTime(json['createdAt']) ?? DateTime.now(),
+      updatedAt: _parseDateTime(json['updatedAt']) ?? DateTime.now(),
     );
+  }
+
+  static DateTime? _parseDateTime(dynamic dateValue) {
+    if (dateValue == null) return null;
+    if (dateValue is String) {
+      return DateTime.tryParse(dateValue);
+    }
+    return null;
   }
 
   Map<String, dynamic> toJson() {
