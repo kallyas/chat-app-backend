@@ -45,13 +45,34 @@ export const getUserChatRooms = catchAsync(async (req: AuthRequest, res: Respons
     throw new AppError('User not authenticated', 401);
   }
 
-  const chatRooms = await ChatService.getUserChatRooms(req.user._id.toString());
+  const { page = '1', limit = '20' } = req.query;
+
+  // Parse and validate pagination parameters
+  const pageNum = parseInt(page as string) || 1;
+  const limitNum = Math.min(parseInt(limit as string) || 20, 50); // Max 50 per page for chat rooms
+
+  if (pageNum < 1) {
+    throw new AppError('Page must be greater than 0', 400);
+  }
+
+  if (limitNum < 1) {
+    throw new AppError('Limit must be greater than 0', 400);
+  }
+
+  const result = await ChatService.getUserChatRooms(req.user._id.toString(), pageNum, limitNum);
 
   res.status(200).json({
     success: true,
     data: {
-      chatRooms,
-      count: chatRooms.length,
+      chatRooms: result.chatRooms,
+      pagination: {
+        page: pageNum,
+        limit: limitNum,
+        total: result.total,
+        totalPages: result.totalPages,
+        hasNext: result.hasNext,
+        hasPrev: result.hasPrev,
+      },
     },
   });
 });
