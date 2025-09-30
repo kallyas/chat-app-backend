@@ -7,12 +7,16 @@ import 'providers/theme_provider.dart';
 import 'screens/auth/login_screen.dart';
 import 'screens/home/home_screen.dart';
 import 'services/storage_service.dart';
+import 'services/api_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
   // Initialize storage service
   await StorageService.init();
+  
+  // Initialize API service
+  ApiService().initialize();
   
   runApp(const ChatApp());
 }
@@ -59,7 +63,10 @@ class _AppWrapperState extends State<AppWrapper> {
   @override
   void initState() {
     super.initState();
-    _checkAuthState();
+    // Defer auth check until after the initial build
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _checkAuthState();
+    });
   }
 
   Future<void> _checkAuthState() async {
