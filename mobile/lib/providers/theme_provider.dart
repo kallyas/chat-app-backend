@@ -38,7 +38,7 @@ class ThemeProvider extends ChangeNotifier {
           centerTitle: true,
           surfaceTintColor: Colors.transparent,
         ),
-        cardTheme: CardTheme(
+        cardTheme: const CardThemeData(
           elevation: 2,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.all(Radius.circular(12)),
@@ -87,7 +87,7 @@ class ThemeProvider extends ChangeNotifier {
           centerTitle: true,
           surfaceTintColor: Colors.transparent,
         ),
-        cardTheme: CardTheme(
+        cardTheme: const CardThemeData(
           elevation: 2,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.all(Radius.circular(12)),
@@ -161,7 +161,7 @@ class ThemeProvider extends ChangeNotifier {
   Color get unreadCountTextColor => Colors.white;
 
   // App bar gradient
-  Gradient get appBarGradient => LinearGradient(
+  Gradient get appBarGradient => const LinearGradient(
         colors: [
           primaryBlue,
           primaryDark,
