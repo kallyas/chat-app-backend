@@ -5,6 +5,7 @@ import '../models/message.dart';
 import '../models/user.dart';
 import '../services/chat_service.dart';
 import '../services/socket_service.dart';
+import '../services/storage_service.dart';
 
 enum ChatState {
   initial,
@@ -29,6 +30,11 @@ class ChatProvider extends ChangeNotifier {
   Map<String, bool> _hasMoreMessages = {};
   Map<String, List<String>> _typingUsers = {};
   
+  // Chat rooms pagination
+  bool _isLoadingChatRooms = false;
+  bool _hasMoreChatRooms = true;
+  int _currentChatRoomsPage = 1;
+  
   // Current chat
   String? _currentChatRoomId;
   ChatRoom? _currentChatRoom;
@@ -45,6 +51,8 @@ class ChatProvider extends ChangeNotifier {
   String? get currentChatRoomId => _currentChatRoomId;
   ChatRoom? get currentChatRoom => _currentChatRoom;
   List<User> get onlineUsers => _onlineUsers;
+  bool get isLoadingChatRooms => _isLoadingChatRooms;
+  bool get hasMoreChatRooms => _hasMoreChatRooms;
 
   List<Message> getMessages(String chatRoomId) {
     return _messages[chatRoomId] ?? [];
@@ -71,6 +79,13 @@ class ChatProvider extends ChangeNotifier {
     _setLoading(true);
     
     try {
+      // Only initialize if we have valid auth tokens
+      final hasTokens = await _hasValidAuth();
+      if (!hasTokens) {
+        _setError('Authentication required');
+        return;
+      }
+      
       // Setup socket listeners
       _setupSocketListeners();
       
@@ -106,13 +121,30 @@ class ChatProvider extends ChangeNotifier {
 
   // Load chat rooms
   Future<void> loadChatRooms({bool refresh = false}) async {
-    if (!refresh && _chatRooms.isNotEmpty) return;
+    if (_isLoadingChatRooms) return;
+
+    _isLoadingChatRooms = true;
+    notifyListeners();
 
     try {
-      final response = await _chatService.getUserChatRooms();
+      final page = refresh ? 1 : (_chatRooms.isEmpty ? 1 : _currentChatRoomsPage + 1);
+      final response = await _chatService.getUserChatRooms(page: page);
       
       if (response.success && response.data != null) {
-        _chatRooms = response.data!.items;
+        final newRooms = response.data!.items;
+        
+        if (refresh) {
+          _chatRooms = newRooms;
+          _currentChatRoomsPage = 1;
+        } else if (_chatRooms.isEmpty) {
+          _chatRooms = newRooms;
+          _currentChatRoomsPage = 1;
+        } else {
+          _chatRooms.addAll(newRooms);
+          _currentChatRoomsPage++;
+        }
+        
+        _hasMoreChatRooms = response.data!.pagination.hasNext;
         
         // Cache users from chat rooms
         for (final room in _chatRooms) {
@@ -127,7 +159,17 @@ class ChatProvider extends ChangeNotifier {
       }
     } catch (e) {
       _setError('Failed to load chat rooms: $e');
+    } finally {
+      _isLoadingChatRooms = false;
+      notifyListeners();
     }
+  }
+
+  // Load more chat rooms (for infinite scroll)
+  Future<void> loadMoreChatRooms() async {
+    if (_isLoadingChatRooms || !_hasMoreChatRooms) return;
+    
+    await loadChatRooms();
   }
 
   // Load messages for a chat room
@@ -342,6 +384,7 @@ class ChatProvider extends ChangeNotifier {
 
     try {
       final response = await _chatService.searchUsers(query: query);
+      debugPrint('Search users response: $response');
       
       if (response.success && response.data != null) {
         final users = response.data!.items;
@@ -368,7 +411,7 @@ class ChatProvider extends ChangeNotifier {
       final response = await _chatService.getOnlineUsers();
       
       if (response.success && response.data != null) {
-        _onlineUsers = response.data!;
+        _onlineUsers = response.data!.items;
         
         // Cache users
         for (final user in _onlineUsers) {
@@ -593,6 +636,14 @@ class ChatProvider extends ChangeNotifier {
     _currentChatRoom = null;
     _onlineUsers.clear();
     _users.clear();
+    _isLoadingChatRooms = false;
+    _hasMoreChatRooms = true;
+    _currentChatRoomsPage = 1;
     _setState(ChatState.initial);
+  }
+
+  // Check if we have valid authentication
+  Future<bool> _hasValidAuth() async {
+    return await StorageService.hasAuthTokens();
   }
 }
