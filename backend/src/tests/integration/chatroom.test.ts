@@ -108,7 +108,9 @@ describe('ChatRoom Integration Tests', () => {
         .send(chatRoomData)
         .expect(201);
 
-      expect(response1.body.data.chatRoom._id).toBe(response2.body.data.chatRoom._id);
+      expect(response1.body.data.chatRoom._id).toBe(
+        response2.body.data.chatRoom._id
+      );
     });
 
     it('should return 400 for invalid participants', async () => {
@@ -170,9 +172,7 @@ describe('ChatRoom Integration Tests', () => {
     });
 
     it('should return 401 without authentication', async () => {
-      const response = await request(app)
-        .get('/api/chatrooms')
-        .expect(401);
+      const response = await request(app).get('/api/chatrooms').expect(401);
 
       expect(response.body.success).toBe(false);
     });
