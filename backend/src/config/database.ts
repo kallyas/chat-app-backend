@@ -15,15 +15,16 @@ class Database {
 
   public async connect(): Promise<void> {
     try {
-      const mongoUri = process.env.MONGODB_URI || 'mongodb://localhost:27017/chatapp';
-      
+      const mongoUri =
+        process.env.MONGODB_URI || 'mongodb://localhost:27017/chatapp';
+
       await mongoose.connect(mongoUri);
 
       mongoose.connection.on('connected', () => {
         logger.info('Connected to MongoDB');
       });
 
-      mongoose.connection.on('error', (error) => {
+      mongoose.connection.on('error', error => {
         logger.error('MongoDB connection error:', error);
       });
 
@@ -34,11 +35,12 @@ class Database {
       process.on('SIGINT', () => {
         void (async () => {
           await mongoose.connection.close();
-          logger.info('MongoDB connection closed due to application termination');
+          logger.info(
+            'MongoDB connection closed due to application termination'
+          );
           process.exit(0);
         })();
       });
-
     } catch (error) {
       logger.error('Failed to connect to MongoDB:', error);
       process.exit(1);
