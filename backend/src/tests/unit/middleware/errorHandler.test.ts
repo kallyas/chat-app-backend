@@ -240,11 +240,7 @@ describe('Error Handler Middleware', () => {
 
   describe('notFound', () => {
     it('should create 404 error and call next', () => {
-      notFound(
-        mockRequest as Request,
-        mockResponse as Response,
-        nextFunction
-      );
+      notFound(mockRequest as Request, mockResponse as Response, nextFunction);
 
       expect(nextFunction).toHaveBeenCalledWith(
         expect.objectContaining({
