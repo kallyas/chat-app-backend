@@ -29,12 +29,18 @@ export const authenticateSocket = async (socket: AuthenticatedSocket, next: (err
       return next(new Error('Invalid token - user not found'));
     }
 
+    // Validate token version
+    if (decoded.tokenVersion !== undefined && decoded.tokenVersion !== user.tokenVersion) {
+      return next(new Error('Token has been invalidated. Please login again.'));
+    }
+
     // Attach user info to socket
     socket.userId = user._id.toString();
     socket.username = user.username;
 
-    // Update user online status
+    // Increment socket count and update online status atomically
     await User.findByIdAndUpdate(user._id, {
+      $inc: { activeSocketCount: 1 },
       isOnline: true,
       lastSeen: new Date(),
     });
