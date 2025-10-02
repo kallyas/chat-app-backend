@@ -24,14 +24,18 @@ export interface IChatRoom extends Document {
   updatedAt: Date;
   addParticipant(userId: mongoose.Types.ObjectId): Promise<IChatRoom>;
   removeParticipant(userId: mongoose.Types.ObjectId): Promise<IChatRoom>;
-  updateLastMessage(content: string, senderId: mongoose.Types.ObjectId, messageType?: 'text' | 'image' | 'file'): Promise<IChatRoom>;
+  updateLastMessage(
+    content: string,
+    senderId: mongoose.Types.ObjectId,
+    messageType?: 'text' | 'image' | 'file'
+  ): Promise<IChatRoom>;
 }
 
 const chatRoomSchema = new Schema<IChatRoom>(
   {
     name: {
       type: String,
-      required: function(this: IChatRoom) {
+      required: function (this: IChatRoom) {
         return this.type === ChatRoomType.GROUP;
       },
       trim: true,
@@ -96,7 +100,9 @@ const chatRoomSchema = new Schema<IChatRoom>(
 chatRoomSchema.pre('save', function (next) {
   if (this.type === ChatRoomType.PRIVATE) {
     if (this.participants.length !== 2) {
-      return next(new Error('Private chat room must have exactly 2 participants'));
+      return next(
+        new Error('Private chat room must have exactly 2 participants')
+      );
     }
     // Private chats don't need a name - leave it undefined
   }
@@ -108,27 +114,33 @@ chatRoomSchema.pre('save', function (next) {
   next();
 });
 
-chatRoomSchema.methods.addParticipant = function (userId: mongoose.Types.ObjectId) {
+chatRoomSchema.methods.addParticipant = function (
+  userId: mongoose.Types.ObjectId
+) {
   if (this.type === ChatRoomType.PRIVATE) {
     throw new Error('Cannot add participants to private chat');
   }
-  
-  if (!this.participants.some((id: mongoose.Types.ObjectId) => id.equals(userId))) {
+
+  if (
+    !this.participants.some((id: mongoose.Types.ObjectId) => id.equals(userId))
+  ) {
     this.participants.push(userId);
   }
-  
+
   return this.save();
 };
 
-chatRoomSchema.methods.removeParticipant = function (userId: mongoose.Types.ObjectId) {
+chatRoomSchema.methods.removeParticipant = function (
+  userId: mongoose.Types.ObjectId
+) {
   this.participants = this.participants.filter(
     (participantId: mongoose.Types.ObjectId) => !participantId.equals(userId)
   ) as mongoose.Types.ObjectId[];
-  
+
   if (this.participants.length === 0) {
     this.isActive = false;
   }
-  
+
   return this.save();
 };
 
@@ -143,7 +155,7 @@ chatRoomSchema.methods.updateLastMessage = function (
     timestamp: new Date(),
     messageType,
   };
-  
+
   return this.save();
 };
 
@@ -155,9 +167,9 @@ chatRoomSchema.index({ 'lastMessage.timestamp': -1 });
 
 chatRoomSchema.index(
   { participants: 1, type: 1 },
-  { 
+  {
     unique: true,
-    partialFilterExpression: { type: ChatRoomType.PRIVATE }
+    partialFilterExpression: { type: ChatRoomType.PRIVATE },
   }
 );
 
