@@ -37,16 +37,25 @@ const startServer = async () => {
     function gracefulShutdown(signal: string) {
       logger.info(`Received ${signal}. Shutting down gracefully...`);
       
-      httpServer.close(() => {
-        logger.info('HTTP server closed');
+      // Close Socket.IO connections first
+      io.disconnectSockets();
+      logger.info('Disconnecting all Socket.IO clients...');
+      
+      io.close(() => {
+        logger.info('Socket.IO server closed');
         
-        // Close database connection
-        database.disconnect().then(() => {
-          logger.info('Database connection closed');
-          process.exit(0);
-        }).catch((error) => {
-          logger.error('Error closing database connection:', error);
-          process.exit(1);
+        // Close HTTP server
+        httpServer.close(() => {
+          logger.info('HTTP server closed');
+          
+          // Close database connection
+          database.disconnect().then(() => {
+            logger.info('Database connection closed');
+            process.exit(0);
+          }).catch((error) => {
+            logger.error('Error closing database connection:', error);
+            process.exit(1);
+          });
         });
       });
 
