@@ -1,6 +1,11 @@
 import { User, IUser } from '@/models';
 import { AppError } from '@/middleware';
-import { generateResetToken, sanitizeUser, validatePagination, calculateSkip } from '@/utils';
+import {
+  generateResetToken,
+  sanitizeUser,
+  validatePagination,
+  calculateSkip,
+} from '@/utils';
 import { logger } from '@/config/logger';
 import { RegisterUserData, LoginUserData } from '@/types';
 import crypto from 'crypto';
@@ -14,12 +19,15 @@ export class AuthService {
       // Check both email and username in parallel to prevent timing attacks
       const [existingUserByEmail, existingUserByUsername] = await Promise.all([
         User.findOne({ email }),
-        User.findOne({ username })
+        User.findOne({ username }),
       ]);
 
       // Use generic error message to prevent account enumeration
       if (existingUserByEmail || existingUserByUsername) {
-        throw new AppError('Account already exists with provided credentials', 400);
+        throw new AppError(
+          'Account already exists with provided credentials',
+          400
+        );
       }
 
       const user = new User({
@@ -51,7 +59,8 @@ export class AuthService {
 
       // Always perform password comparison to prevent timing attacks
       // If user doesn't exist, compare against a dummy hash
-      const passwordHash = user?.password || await bcrypt.hash('dummy-password', 12);
+      const passwordHash =
+        user?.password || (await bcrypt.hash('dummy-password', 12));
       const isPasswordCorrect = await bcrypt.compare(password, passwordHash);
 
       // Check both user existence and password correctness together
@@ -99,21 +108,26 @@ export class AuthService {
     }
   }
 
-  static async updateUserProfile(userId: string, updateData: Partial<IUser>): Promise<IUser> {
+  static async updateUserProfile(
+    userId: string,
+    updateData: Partial<IUser>
+  ): Promise<IUser> {
     try {
       const allowedUpdates = ['username', 'profilePic', 'password'];
       const updates: Partial<IUser> = {};
 
       Object.keys(updateData).forEach(key => {
         if (allowedUpdates.includes(key)) {
-          (updates as Record<string, any>)[key] = (updateData as Record<string, any>)[key];
+          (updates as Record<string, any>)[key] = (
+            updateData as Record<string, any>
+          )[key];
         }
       });
 
       if (updates.username) {
         const existingUser = await User.findOne({
           username: updates.username,
-          _id: { $ne: userId }
+          _id: { $ne: userId },
         });
 
         if (existingUser) {
@@ -166,7 +180,9 @@ export class AuthService {
         logger.info(`Password reset initiated for: ${email}`);
       } else {
         // Log attempt but don't reveal user doesn't exist
-        logger.warn(`Password reset attempted for non-existent email: ${email}`);
+        logger.warn(
+          `Password reset attempted for non-existent email: ${email}`
+        );
       }
 
       // Always return success to prevent enumeration
@@ -181,9 +197,15 @@ export class AuthService {
     }
   }
 
-  static async resetPassword(token: string, newPassword: string): Promise<void> {
+  static async resetPassword(
+    token: string,
+    newPassword: string
+  ): Promise<void> {
     try {
-      const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
+      const hashedToken = crypto
+        .createHash('sha256')
+        .update(token)
+        .digest('hex');
 
       const user = await User.findOne({
         resetPasswordToken: hashedToken,
@@ -216,10 +238,19 @@ export class AuthService {
     type: 'username' | 'email' | 'both' = 'both',
     page: any = 1,
     limit: any = 20
-  ): Promise<{ users: IUser[], total: number, totalPages: number, hasNext: boolean, hasPrev: boolean }> {
+  ): Promise<{
+    users: IUser[];
+    total: number;
+    totalPages: number;
+    hasNext: boolean;
+    hasPrev: boolean;
+  }> {
     try {
       // Validate pagination parameters
-      const { page: validPage, limit: validLimit } = validatePagination(page, limit);
+      const { page: validPage, limit: validLimit } = validatePagination(
+        page,
+        limit
+      );
 
       const searchConditions: Record<string, any> = {
         _id: { $ne: currentUserId },
@@ -238,15 +269,17 @@ export class AuthService {
 
       // Calculate pagination
       const skip = calculateSkip(validPage, validLimit);
-      
+
       // Get total count and users in parallel
       const [users, total] = await Promise.all([
         User.find(searchConditions)
-          .select('username email profilePic isOnline lastSeen createdAt updatedAt')
+          .select(
+            'username email profilePic isOnline lastSeen createdAt updatedAt'
+          )
           .skip(skip)
           .limit(validLimit)
           .sort({ username: 1 }),
-        User.countDocuments(searchConditions)
+        User.countDocuments(searchConditions),
       ]);
 
       const totalPages = Math.ceil(total / validLimit);
@@ -258,7 +291,7 @@ export class AuthService {
         total,
         totalPages,
         hasNext,
-        hasPrev
+        hasPrev,
       };
     } catch (error) {
       logger.error('Error in searchUsers:', error);
@@ -266,7 +299,10 @@ export class AuthService {
     }
   }
 
-  static async updateUserOnlineStatus(userId: string, isOnline: boolean): Promise<void> {
+  static async updateUserOnlineStatus(
+    userId: string,
+    isOnline: boolean
+  ): Promise<void> {
     try {
       await User.findByIdAndUpdate(userId, {
         isOnline,
@@ -281,19 +317,30 @@ export class AuthService {
   static async getOnlineUsers(
     page: any = 1,
     limit: any = 20
-  ): Promise<{ users: IUser[], total: number, totalPages: number, hasNext: boolean, hasPrev: boolean }> {
+  ): Promise<{
+    users: IUser[];
+    total: number;
+    totalPages: number;
+    hasNext: boolean;
+    hasPrev: boolean;
+  }> {
     try {
       // Validate pagination parameters
-      const { page: validPage, limit: validLimit } = validatePagination(page, limit);
+      const { page: validPage, limit: validLimit } = validatePagination(
+        page,
+        limit
+      );
       const skip = calculateSkip(validPage, validLimit);
 
       const [users, total] = await Promise.all([
         User.find({ isOnline: true })
-          .select('username email profilePic isOnline lastSeen createdAt updatedAt')
+          .select(
+            'username email profilePic isOnline lastSeen createdAt updatedAt'
+          )
           .skip(skip)
           .limit(validLimit)
           .sort({ lastSeen: -1 }),
-        User.countDocuments({ isOnline: true })
+        User.countDocuments({ isOnline: true }),
       ]);
 
       const totalPages = Math.ceil(total / validLimit);
@@ -305,7 +352,7 @@ export class AuthService {
         total,
         totalPages,
         hasNext,
-        hasPrev
+        hasPrev,
       };
     } catch (error) {
       logger.error('Error in getOnlineUsers:', error);
