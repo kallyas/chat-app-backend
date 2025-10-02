@@ -7,8 +7,16 @@ const router = Router();
 // Public routes
 router.post('/register', authLimiter, authController.register);
 router.post('/login', authLimiter, authController.login);
-router.post('/reset-password', authLimiter, authController.initiatePasswordReset);
-router.post('/reset-password/:token', authLimiter, authController.resetPassword);
+router.post(
+  '/reset-password',
+  authLimiter,
+  authController.initiatePasswordReset
+);
+router.post(
+  '/reset-password/:token',
+  authLimiter,
+  authController.resetPassword
+);
 router.post('/refresh-token', authController.refreshToken);
 
 // Protected routes
