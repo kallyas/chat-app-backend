@@ -1,7 +1,7 @@
 # Real-Time Chat Application
 
 [![Tests](https://github.com/kallyas/chat-app-backend/actions/workflows/ci.yml/badge.svg)](https://github.com/kallyas/chat-app-backend/actions/workflows/ci.yml)
-[![codecov](https://app.codecov.io/gh/kallyas/chat-app-backend/branch/main/graph/badge.svg)](https://app.codecov.io/gh/kallyas/chat-app-backend)
+[![codecov](https://codecov.io/gh/kallyas/chat-app-backend/graph/badge.svg?token=81KYBVzPSw)](https://codecov.io/gh/kallyas/chat-app-backend)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 A modern, scalable real-time chat application built with Node.js, TypeScript, Express, MongoDB, and Socket.IO. Features secure authentication, private/group messaging, typing indicators, read receipts, and comprehensive rate limiting.
