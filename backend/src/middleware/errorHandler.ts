@@ -92,7 +92,8 @@ export const globalErrorHandler = (
 
     if (error.name === 'CastError') error = handleCastErrorDB(error);
     if (error.code === 11000) error = handleDuplicateFieldsDB(error);
-    if (error.name === 'ValidationError') error = handleValidationErrorDB(error);
+    if (error.name === 'ValidationError')
+      error = handleValidationErrorDB(error);
     if (error.name === 'JsonWebTokenError') error = handleJWTError();
     if (error.name === 'TokenExpiredError') error = handleJWTExpiredError();
 
@@ -100,13 +101,19 @@ export const globalErrorHandler = (
   }
 };
 
-export const catchAsync = (fn: (req: Request, res: Response, next: NextFunction) => Promise<any>) => {
+export const catchAsync = (
+  fn: (req: Request, res: Response, next: NextFunction) => Promise<any>
+) => {
   return (req: Request, res: Response, next: NextFunction) => {
     fn(req, res, next).catch(next);
   };
 };
 
-export const notFound = (req: Request, res: Response, next: NextFunction): void => {
+export const notFound = (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): void => {
   const error = new AppError(`Not found - ${req.originalUrl}`, 404);
   next(error);
 };
