@@ -1,6 +1,6 @@
 /**
  * Central types definition file for the Chat App Backend
- * 
+ *
  * This file consolidates all TypeScript interfaces and types to improve
  * type consistency and maintainability across the project.
  */
@@ -97,18 +97,20 @@ export interface SendMessageData {
   /** ID of message being replied to (optional) */
   replyTo?: string | undefined;
   /** Additional message metadata for files/images */
-  metadata?: {
-    /** Original file name */
-    fileName?: string;
-    /** File size in bytes */
-    fileSize?: number;
-    /** MIME type of the file */
-    mimeType?: string;
-    /** Image width in pixels */
-    imageWidth?: number;
-    /** Image height in pixels */
-    imageHeight?: number;
-  } | undefined;
+  metadata?:
+    | {
+        /** Original file name */
+        fileName?: string;
+        /** File size in bytes */
+        fileSize?: number;
+        /** MIME type of the file */
+        mimeType?: string;
+        /** Image width in pixels */
+        imageWidth?: number;
+        /** Image height in pixels */
+        imageHeight?: number;
+      }
+    | undefined;
 }
 
 /**
