@@ -54,6 +54,8 @@ export interface JWTPayload {
   email: string;
   /** User's username */
   username: string;
+  /** Token version for invalidation */
+  tokenVersion?: number;
   /** Token issued at timestamp (seconds) */
   iat?: number;
   /** Token expiration timestamp (seconds) */
