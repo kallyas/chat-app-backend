@@ -1,5 +1,10 @@
 import mongoose from 'mongoose';
-import { Message, MessageType, MessageStatus, IMessage } from '@/models/Message';
+import {
+  Message,
+  MessageType,
+  MessageStatus,
+  IMessage,
+} from '@/models/Message';
 import { ChatRoom, ChatRoomType } from '@/models/ChatRoom';
 import { User } from '@/models/User';
 
@@ -100,7 +105,9 @@ describe('Message Model', () => {
         replyTo: originalMessage._id,
       });
 
-      expect(replyMessage.replyTo?.toString()).toBe(originalMessage._id.toString());
+      expect(replyMessage.replyTo?.toString()).toBe(
+        originalMessage._id.toString()
+      );
     });
   });
 
