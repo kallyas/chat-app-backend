@@ -4,6 +4,7 @@ import { AuthenticatedSocket } from './socketAuth';
 import { logger } from '@/config/logger';
 import { sendMessageSchema, objectIdSchema } from '@/utils';
 import { User, ChatRoom } from '@/models';
+import { socketRateLimiter, SOCKET_RATE_LIMITS } from '@/utils/socketRateLimit';
 
 export interface TypingData {
   roomId: string;
@@ -31,6 +32,12 @@ export const setupChatEvents = (io: Server, socket: AuthenticatedSocket) => {
   // Join a chat room
   socket.on('joinRoom', async (data: JoinRoomData) => {
     try {
+      // Rate limit check
+      if (!socketRateLimiter.checkUser(socket.userId!, 'joinRoom', SOCKET_RATE_LIMITS.joinRoom)) {
+        socket.emit('error', { message: 'Rate limit exceeded. Please slow down.' });
+        return;
+      }
+
       const { roomId } = data;
 
       // Validate room ID format
@@ -78,7 +85,20 @@ export const setupChatEvents = (io: Server, socket: AuthenticatedSocket) => {
   // Leave a chat room
   socket.on('leaveRoom', async (data: JoinRoomData) => {
     try {
+      // Rate limit check
+      if (!socketRateLimiter.checkUser(socket.userId!, 'leaveRoom', SOCKET_RATE_LIMITS.leaveRoom)) {
+        socket.emit('error', { message: 'Rate limit exceeded. Please slow down.' });
+        return;
+      }
+
       const { roomId } = data;
+
+      // Validate room ID format
+      const { error } = objectIdSchema.validate(roomId);
+      if (error) {
+        socket.emit('error', { message: 'Invalid room ID format' });
+        return;
+      }
 
       await socket.leave(roomId);
 
@@ -105,6 +125,12 @@ export const setupChatEvents = (io: Server, socket: AuthenticatedSocket) => {
   // Send a message
   socket.on('sendMessage', async (data: SocketSendMessageData) => {
     try {
+      // Rate limit check
+      if (!socketRateLimiter.checkUser(socket.userId!, 'sendMessage', SOCKET_RATE_LIMITS.sendMessage)) {
+        socket.emit('error', { message: 'Rate limit exceeded. Please slow down.' });
+        return;
+      }
+
       // Extract roomId separately for validation
       const { roomId, ...messageContent } = data;
       
@@ -144,12 +170,37 @@ export const setupChatEvents = (io: Server, socket: AuthenticatedSocket) => {
   });
 
   // Handle typing indicators
-  socket.on('typing', (data: TypingData) => {
+  socket.on('typing', async (data: TypingData) => {
     try {
+      // Rate limit check
+      if (!socketRateLimiter.checkUser(socket.userId!, 'typing', SOCKET_RATE_LIMITS.typing)) {
+        socket.emit('error', { message: 'Rate limit exceeded. Please slow down.' });
+        return;
+      }
+
       const { roomId, isTyping } = data;
+
+      // Validate roomId format
+      const { error } = objectIdSchema.validate(roomId);
+      if (error) {
+        socket.emit('error', { message: 'Invalid room ID format' });
+        return;
+      }
 
       if (typeof isTyping !== 'boolean') {
         socket.emit('error', { message: 'isTyping must be a boolean' });
+        return;
+      }
+
+      // Validate user is participant in the room
+      const chatRoom = await ChatRoom.findOne({
+        _id: roomId,
+        participants: socket.userId,
+        isActive: true,
+      });
+
+      if (!chatRoom) {
+        socket.emit('error', { message: 'Room not found or access denied' });
         return;
       }
 
@@ -170,6 +221,12 @@ export const setupChatEvents = (io: Server, socket: AuthenticatedSocket) => {
   // Handle stop typing
   socket.on('stopTyping', (data: { roomId: string }) => {
     try {
+      // Rate limit check
+      if (!socketRateLimiter.checkUser(socket.userId!, 'stopTyping', SOCKET_RATE_LIMITS.stopTyping)) {
+        socket.emit('error', { message: 'Rate limit exceeded. Please slow down.' });
+        return;
+      }
+
       const { roomId } = data;
 
       socket.to(roomId).emit('userTyping', {
@@ -187,6 +244,12 @@ export const setupChatEvents = (io: Server, socket: AuthenticatedSocket) => {
   // Handle message read receipts
   socket.on('messageRead', async (data: MessageReadData) => {
     try {
+      // Rate limit check
+      if (!socketRateLimiter.checkUser(socket.userId!, 'messageRead', SOCKET_RATE_LIMITS.messageRead)) {
+        socket.emit('error', { message: 'Rate limit exceeded. Please slow down.' });
+        return;
+      }
+
       const { roomId, messageId } = data;
 
       // Validate IDs
@@ -218,6 +281,12 @@ export const setupChatEvents = (io: Server, socket: AuthenticatedSocket) => {
   // Handle user online status
   socket.on('updateStatus', async (data: { status: 'online' | 'offline' | 'away' }) => {
     try {
+      // Rate limit check
+      if (!socketRateLimiter.checkUser(socket.userId!, 'updateStatus', SOCKET_RATE_LIMITS.updateStatus)) {
+        socket.emit('error', { message: 'Rate limit exceeded. Please slow down.' });
+        return;
+      }
+
       const { status } = data;
 
       if (!['online', 'offline', 'away'].includes(status)) {
@@ -249,20 +318,33 @@ export const setupChatEvents = (io: Server, socket: AuthenticatedSocket) => {
   // Handle disconnect
   socket.on('disconnect', async (reason) => {
     try {
-      // Update user offline status
+      // Decrement socket count and update status
       if (socket.userId) {
-        await User.findByIdAndUpdate(socket.userId, {
-          isOnline: false,
-          lastSeen: new Date(),
-        });
+        // Atomically decrement socket count
+        const user = await User.findByIdAndUpdate(
+          socket.userId,
+          {
+            $inc: { activeSocketCount: -1 },
+            lastSeen: new Date(),
+          },
+          { new: true }
+        );
 
-        // Broadcast user went offline
-        socket.broadcast.emit('userStatusChanged', {
-          userId: socket.userId,
-          username: socket.username,
-          status: 'offline',
-          timestamp: new Date(),
-        });
+        // Only set offline if no active sockets remain
+        if (user && user.activeSocketCount <= 0) {
+          await User.findByIdAndUpdate(socket.userId, {
+            isOnline: false,
+            activeSocketCount: 0, // Ensure it doesn't go negative
+          });
+
+          // Broadcast user went offline
+          socket.broadcast.emit('userStatusChanged', {
+            userId: socket.userId,
+            username: socket.username,
+            status: 'offline',
+            timestamp: new Date(),
+          });
+        }
       }
 
       logger.info(`User ${socket.username} disconnected: ${reason}`);
