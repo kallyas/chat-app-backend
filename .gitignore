@@ -10,3 +10,5 @@ coverage/
 *.swp   
 prompt.md
 logs/
+FLUTTER_MOBILE_APP_PROMPT.md
+LOGGING.md
