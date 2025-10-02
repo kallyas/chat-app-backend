@@ -3,7 +3,13 @@ import cors from 'cors';
 import helmet from 'helmet';
 import { config } from '@/config/environment';
 import { logger } from '@/config/logger';
-import { globalErrorHandler, notFound, generalLimiter, requestLogger, addRequestId } from '@/middleware';
+import {
+  globalErrorHandler,
+  notFound,
+  generalLimiter,
+  requestLogger,
+  addRequestId,
+} from '@/middleware';
 import routes from '@/routes';
 
 export const createApp = () => {
@@ -16,12 +22,14 @@ export const createApp = () => {
   app.use(helmet());
 
   // CORS configuration
-  app.use(cors({
-    origin: config.cors.origins,
-    credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
-  }));
+  app.use(
+    cors({
+      origin: config.cors.origins,
+      credentials: true,
+      methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+      allowedHeaders: ['Content-Type', 'Authorization'],
+    })
+  );
 
   // Rate limiting
   app.use(generalLimiter);
