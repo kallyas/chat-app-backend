@@ -20,9 +20,12 @@ export class SocketRateLimiter {
   constructor(enableAutoCleanup: boolean = true) {
     // Clean up expired entries every 5 minutes (optional for testing)
     if (enableAutoCleanup) {
-      this.cleanupInterval = setInterval(() => {
-        this.cleanup();
-      }, 5 * 60 * 1000);
+      this.cleanupInterval = setInterval(
+        () => {
+          this.cleanup();
+        },
+        5 * 60 * 1000
+      );
     }
   }
 
@@ -53,11 +56,15 @@ export class SocketRateLimiter {
     if (limit.count >= config.maxRequests) {
       limit.violations++;
 
-      logger.warn(`Rate limit exceeded for socket ${socketId} on event '${event}': ${limit.count}/${config.maxRequests} requests in window`);
+      logger.warn(
+        `Rate limit exceeded for socket ${socketId} on event '${event}': ${limit.count}/${config.maxRequests} requests in window`
+      );
 
       // Disconnect socket if too many violations
       if (config.maxViolations && limit.violations >= config.maxViolations) {
-        logger.error(`Socket ${socketId} exceeded violation threshold (${limit.violations}). Disconnecting.`);
+        logger.error(
+          `Socket ${socketId} exceeded violation threshold (${limit.violations}). Disconnecting.`
+        );
         socket.disconnect(true);
       }
 
@@ -92,7 +99,9 @@ export class SocketRateLimiter {
 
     if (limit.count >= config.maxRequests) {
       limit.violations++;
-      logger.warn(`Rate limit exceeded for user ${userId} on event '${event}': ${limit.count}/${config.maxRequests} requests in window`);
+      logger.warn(
+        `Rate limit exceeded for user ${userId} on event '${event}': ${limit.count}/${config.maxRequests} requests in window`
+      );
       return false;
     }
 
@@ -167,7 +176,9 @@ export class SocketRateLimiter {
 }
 
 // Singleton instance - disable auto cleanup in test environment
-export const socketRateLimiter = new SocketRateLimiter(process.env.NODE_ENV !== 'test');
+export const socketRateLimiter = new SocketRateLimiter(
+  process.env.NODE_ENV !== 'test'
+);
 
 // Recommended rate limit configurations
 export const SOCKET_RATE_LIMITS = {
