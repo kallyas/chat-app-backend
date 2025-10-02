@@ -1,23 +1,25 @@
 import { User, IUser } from '@/models';
 import { AppError } from '@/middleware';
-import { generateResetToken, sanitizeUser } from '@/utils';
+import { generateResetToken, sanitizeUser, validatePagination, calculateSkip } from '@/utils';
 import { logger } from '@/config/logger';
 import { RegisterUserData, LoginUserData } from '@/types';
 import crypto from 'crypto';
+import bcrypt from 'bcryptjs';
 
 export class AuthService {
   static async registerUser(userData: RegisterUserData): Promise<IUser> {
     try {
       const { email, username, password, profilePic } = userData;
 
-      const existingUserByEmail = await User.findOne({ email });
-      if (existingUserByEmail) {
-        throw new AppError('Email already registered', 400);
-      }
+      // Check both email and username in parallel to prevent timing attacks
+      const [existingUserByEmail, existingUserByUsername] = await Promise.all([
+        User.findOne({ email }),
+        User.findOne({ username })
+      ]);
 
-      const existingUserByUsername = await User.findOne({ username });
-      if (existingUserByUsername) {
-        throw new AppError('Username already taken', 400);
+      // Use generic error message to prevent account enumeration
+      if (existingUserByEmail || existingUserByUsername) {
+        throw new AppError('Account already exists with provided credentials', 400);
       }
 
       const user = new User({
@@ -46,13 +48,15 @@ export class AuthService {
       const { email, password } = loginData;
 
       const user = await User.findOne({ email }).select('+password');
-      if (!user) {
-        throw new AppError('Invalid email or password', 401);
-      }
 
-      const isPasswordCorrect = await user.comparePassword(password);
-      if (!isPasswordCorrect) {
-        throw new AppError('Invalid email or password', 401);
+      // Always perform password comparison to prevent timing attacks
+      // If user doesn't exist, compare against a dummy hash
+      const passwordHash = user?.password || await bcrypt.hash('dummy-password', 12);
+      const isPasswordCorrect = await bcrypt.compare(password, passwordHash);
+
+      // Check both user existence and password correctness together
+      if (!user || !isPasswordCorrect) {
+        throw new AppError('Invalid credentials', 401);
       }
 
       user.isOnline = true;
@@ -107,19 +111,24 @@ export class AuthService {
       });
 
       if (updates.username) {
-        const existingUser = await User.findOne({ 
+        const existingUser = await User.findOne({
           username: updates.username,
           _id: { $ne: userId }
         });
-        
+
         if (existingUser) {
           throw new AppError('Username already taken', 400);
         }
       }
 
+      // Increment token version if password is being updated to invalidate existing tokens
+      if (updates.password) {
+        (updates as any).tokenVersion = { $inc: 1 };
+      }
+
       const user = await User.findByIdAndUpdate(
         userId,
-        updates,
+        updates.password ? { ...updates, $inc: { tokenVersion: 1 } } : updates,
         { new: true, runValidators: true }
       );
 
@@ -146,18 +155,22 @@ export class AuthService {
   static async initiatePasswordReset(email: string): Promise<string> {
     try {
       const user = await User.findOne({ email });
-      if (!user) {
-        throw new AppError('User not found with that email', 404);
-      }
 
+      // Generate token regardless of user existence to prevent timing attacks
       const { token, hashedToken } = generateResetToken();
 
-      user.resetPasswordToken = hashedToken;
-      user.resetPasswordExpire = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
-      await user.save();
+      if (user) {
+        user.resetPasswordToken = hashedToken;
+        user.resetPasswordExpire = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+        await user.save();
+        logger.info(`Password reset initiated for: ${email}`);
+      } else {
+        // Log attempt but don't reveal user doesn't exist
+        logger.warn(`Password reset attempted for non-existent email: ${email}`);
+      }
 
-      logger.info(`Password reset initiated for: ${email}`);
-
+      // Always return success to prevent enumeration
+      // In production, you should send email only if user exists
       return token;
     } catch (error) {
       logger.error('Error in initiatePasswordReset:', error);
@@ -184,6 +197,7 @@ export class AuthService {
       user.password = newPassword;
       user.resetPasswordToken = undefined;
       user.resetPasswordExpire = undefined;
+      user.tokenVersion += 1; // Invalidate all existing tokens
       await user.save();
 
       logger.info(`Password reset completed for: ${user.email}`);
@@ -197,13 +211,16 @@ export class AuthService {
   }
 
   static async searchUsers(
-    query: string, 
-    currentUserId: string, 
+    query: string,
+    currentUserId: string,
     type: 'username' | 'email' | 'both' = 'both',
-    page: number = 1,
-    limit: number = 20
+    page: any = 1,
+    limit: any = 20
   ): Promise<{ users: IUser[], total: number, totalPages: number, hasNext: boolean, hasPrev: boolean }> {
     try {
+      // Validate pagination parameters
+      const { page: validPage, limit: validLimit } = validatePagination(page, limit);
+
       const searchConditions: Record<string, any> = {
         _id: { $ne: currentUserId },
       };
@@ -220,21 +237,21 @@ export class AuthService {
       }
 
       // Calculate pagination
-      const skip = (page - 1) * limit;
+      const skip = calculateSkip(validPage, validLimit);
       
       // Get total count and users in parallel
       const [users, total] = await Promise.all([
         User.find(searchConditions)
           .select('username email profilePic isOnline lastSeen createdAt updatedAt')
           .skip(skip)
-          .limit(limit)
+          .limit(validLimit)
           .sort({ username: 1 }),
         User.countDocuments(searchConditions)
       ]);
 
-      const totalPages = Math.ceil(total / limit);
-      const hasNext = page < totalPages;
-      const hasPrev = page > 1;
+      const totalPages = Math.ceil(total / validLimit);
+      const hasNext = validPage < totalPages;
+      const hasPrev = validPage > 1;
 
       return {
         users,
@@ -262,24 +279,26 @@ export class AuthService {
   }
 
   static async getOnlineUsers(
-    page: number = 1,
-    limit: number = 20
+    page: any = 1,
+    limit: any = 20
   ): Promise<{ users: IUser[], total: number, totalPages: number, hasNext: boolean, hasPrev: boolean }> {
     try {
-      const skip = (page - 1) * limit;
-      
+      // Validate pagination parameters
+      const { page: validPage, limit: validLimit } = validatePagination(page, limit);
+      const skip = calculateSkip(validPage, validLimit);
+
       const [users, total] = await Promise.all([
         User.find({ isOnline: true })
           .select('username email profilePic isOnline lastSeen createdAt updatedAt')
           .skip(skip)
-          .limit(limit)
+          .limit(validLimit)
           .sort({ lastSeen: -1 }),
         User.countDocuments({ isOnline: true })
       ]);
 
-      const totalPages = Math.ceil(total / limit);
-      const hasNext = page < totalPages;
-      const hasPrev = page > 1;
+      const totalPages = Math.ceil(total / validLimit);
+      const hasNext = validPage < totalPages;
+      const hasPrev = validPage > 1;
 
       return {
         users,
