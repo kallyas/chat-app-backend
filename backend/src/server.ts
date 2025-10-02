@@ -22,7 +22,7 @@ const startServer = async () => {
 
     // Start server
     const PORT = config.port || 3000;
-    
+
     httpServer.listen(PORT, () => {
       logger.info(`🚀 Server running on port ${PORT}`);
       logger.info(`📍 Environment: ${config.env}`);
@@ -36,36 +36,40 @@ const startServer = async () => {
 
     function gracefulShutdown(signal: string) {
       logger.info(`Received ${signal}. Shutting down gracefully...`);
-      
+
       // Close Socket.IO connections first
       io.disconnectSockets();
       logger.info('Disconnecting all Socket.IO clients...');
-      
+
       io.close(() => {
         logger.info('Socket.IO server closed');
-        
+
         // Close HTTP server
         httpServer.close(() => {
           logger.info('HTTP server closed');
-          
+
           // Close database connection
-          database.disconnect().then(() => {
-            logger.info('Database connection closed');
-            process.exit(0);
-          }).catch((error) => {
-            logger.error('Error closing database connection:', error);
-            process.exit(1);
-          });
+          database
+            .disconnect()
+            .then(() => {
+              logger.info('Database connection closed');
+              process.exit(0);
+            })
+            .catch(error => {
+              logger.error('Error closing database connection:', error);
+              process.exit(1);
+            });
         });
       });
 
       // Force shutdown after 30 seconds
       setTimeout(() => {
-        logger.error('Could not close connections in time, forcefully shutting down');
+        logger.error(
+          'Could not close connections in time, forcefully shutting down'
+        );
         process.exit(1);
       }, 30000);
     }
-
   } catch (error) {
     logger.error('Error starting server:', error);
     process.exit(1);
@@ -73,7 +77,7 @@ const startServer = async () => {
 };
 
 // Handle uncaught exceptions
-process.on('uncaughtException', (error) => {
+process.on('uncaughtException', error => {
   logger.error('Uncaught Exception:', error);
   process.exit(1);
 });
