@@ -2,13 +2,10 @@ import Joi from 'joi';
 import mongoose from 'mongoose';
 
 export const registerSchema = Joi.object({
-  email: Joi.string()
-    .email()
-    .required()
-    .messages({
-      'string.email': 'Please provide a valid email',
-      'any.required': 'Email is required',
-    }),
+  email: Joi.string().email().required().messages({
+    'string.email': 'Please provide a valid email',
+    'any.required': 'Email is required',
+  }),
   username: Joi.string()
     .min(3)
     .max(30)
@@ -17,32 +14,25 @@ export const registerSchema = Joi.object({
     .messages({
       'string.min': 'Username must be at least 3 characters',
       'string.max': 'Username cannot exceed 30 characters',
-      'string.pattern.base': 'Username can only contain letters, numbers, underscores, and hyphens',
+      'string.pattern.base':
+        'Username can only contain letters, numbers, underscores, and hyphens',
       'any.required': 'Username is required',
     }),
-  password: Joi.string()
-    .min(6)
-    .required()
-    .messages({
-      'string.min': 'Password must be at least 6 characters',
-      'any.required': 'Password is required',
-    }),
+  password: Joi.string().min(6).required().messages({
+    'string.min': 'Password must be at least 6 characters',
+    'any.required': 'Password is required',
+  }),
   profilePic: Joi.string().uri().allow(''),
 });
 
 export const loginSchema = Joi.object({
-  email: Joi.string()
-    .email()
-    .required()
-    .messages({
-      'string.email': 'Please provide a valid email',
-      'any.required': 'Email is required',
-    }),
-  password: Joi.string()
-    .required()
-    .messages({
-      'any.required': 'Password is required',
-    }),
+  email: Joi.string().email().required().messages({
+    'string.email': 'Please provide a valid email',
+    'any.required': 'Email is required',
+  }),
+  password: Joi.string().required().messages({
+    'any.required': 'Password is required',
+  }),
 });
 
 export const updateUserSchema = Joi.object({
@@ -55,38 +45,28 @@ export const updateUserSchema = Joi.object({
 });
 
 export const createChatRoomSchema = Joi.object({
-  name: Joi.string()
-    .max(50)
-    .trim(),
-  type: Joi.string()
-    .valid('private', 'group')
-    .required(),
+  name: Joi.string().max(50).trim(),
+  type: Joi.string().valid('private', 'group').required(),
   participants: Joi.array()
-    .items(Joi.string().custom((value: string, helpers) => {
-      if (!mongoose.Types.ObjectId.isValid(value)) {
-        return helpers.error('any.invalid');
-      }
-      return value;
-    }))
+    .items(
+      Joi.string().custom((value: string, helpers) => {
+        if (!mongoose.Types.ObjectId.isValid(value)) {
+          return helpers.error('any.invalid');
+        }
+        return value;
+      })
+    )
     .min(1)
     .required(),
-  description: Joi.string()
-    .max(200)
-    .trim()
-    .allow(''),
+  description: Joi.string().max(200).trim().allow(''),
 });
 
 export const sendMessageSchema = Joi.object({
-  content: Joi.string()
-    .max(2000)
-    .required()
-    .messages({
-      'string.max': 'Message content cannot exceed 2000 characters',
-      'any.required': 'Message content is required',
-    }),
-  type: Joi.string()
-    .valid('text', 'image', 'file')
-    .default('text'),
+  content: Joi.string().max(2000).required().messages({
+    'string.max': 'Message content cannot exceed 2000 characters',
+    'any.required': 'Message content is required',
+  }),
+  type: Joi.string().valid('text', 'image', 'file').default('text'),
   replyTo: Joi.string().custom((value: string, helpers) => {
     if (value && !mongoose.Types.ObjectId.isValid(value)) {
       return helpers.error('any.invalid');
@@ -110,28 +90,21 @@ export const paginationSchema = Joi.object({
 });
 
 export const searchSchema = Joi.object({
-  query: Joi.string()
-    .min(1)
-    .max(100)
-    .required()
-    .messages({
-      'string.min': 'Search query must be at least 1 character',
-      'string.max': 'Search query cannot exceed 100 characters',
-      'any.required': 'Search query is required',
-    }),
+  query: Joi.string().min(1).max(100).required().messages({
+    'string.min': 'Search query must be at least 1 character',
+    'string.max': 'Search query cannot exceed 100 characters',
+    'any.required': 'Search query is required',
+  }),
   type: Joi.string().valid('username', 'email', 'both').default('both'),
   page: Joi.number().integer().min(1).default(1).optional(),
   limit: Joi.number().integer().min(1).max(100).default(20).optional(),
 });
 
 export const resetPasswordSchema = Joi.object({
-  email: Joi.string()
-    .email()
-    .required()
-    .messages({
-      'string.email': 'Please provide a valid email',
-      'any.required': 'Email is required',
-    }),
+  email: Joi.string().email().required().messages({
+    'string.email': 'Please provide a valid email',
+    'any.required': 'Email is required',
+  }),
 });
 
 export const objectIdSchema = Joi.string().custom((value: string, helpers) => {
