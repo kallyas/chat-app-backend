@@ -11,6 +11,8 @@ export interface IUser extends Document {
   lastSeen: Date;
   resetPasswordToken?: string | undefined;
   resetPasswordExpire?: Date | undefined;
+  tokenVersion: number;
+  activeSocketCount: number;
   createdAt: Date;
   updatedAt: Date;
   comparePassword(enteredPassword: string): Promise<boolean>;
@@ -25,7 +27,7 @@ const userSchema = new Schema<IUser>(
       lowercase: true,
       trim: true,
       match: [
-        /^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/,
+        /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
         'Please enter a valid email',
       ],
     },
@@ -60,6 +62,14 @@ const userSchema = new Schema<IUser>(
     },
     resetPasswordToken: String,
     resetPasswordExpire: Date,
+    tokenVersion: {
+      type: Number,
+      default: 0,
+    },
+    activeSocketCount: {
+      type: Number,
+      default: 0,
+    },
   },
   {
     timestamps: true,
