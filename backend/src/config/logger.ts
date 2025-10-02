@@ -22,11 +22,19 @@ const logsDir = path.join(process.cwd(), 'logs');
 
 const transports: winston.transport[] = [];
 
-// Console transport for all environments
+// Console transport for all environments (silent in test to avoid noise)
 if (config.env === 'development') {
   transports.push(
     new winston.transports.Console({
       format: developmentFormat,
+    })
+  );
+} else if (config.env === 'test') {
+  // In test environment, suppress console output (logs still go to files)
+  transports.push(
+    new winston.transports.Console({
+      format: logFormat,
+      silent: true, // Suppress console output during tests
     })
   );
 } else {
@@ -38,54 +46,57 @@ if (config.env === 'development') {
   );
 }
 
-// File transports for all environments except test
+// File transports for all environments
+// Error logs with daily rotation
+transports.push(
+  new DailyRotateFile({
+    filename: path.join(logsDir, config.env === 'test' ? 'test-error-%DATE%.log' : 'error-%DATE%.log'),
+    datePattern: 'YYYY-MM-DD',
+    level: 'error',
+    format: logFormat,
+    maxSize: '20m',
+    maxFiles: config.env === 'test' ? '7d' : '30d',
+    zippedArchive: true,
+    silent: false, // Always write errors to file
+  })
+);
+
+// Combined logs with daily rotation (all levels)
+transports.push(
+  new DailyRotateFile({
+    filename: path.join(logsDir, config.env === 'test' ? 'test-app-%DATE%.log' : 'app-%DATE%.log'),
+    datePattern: 'YYYY-MM-DD',
+    format: logFormat,
+    maxSize: '20m',
+    maxFiles: config.env === 'test' ? '7d' : '14d',
+    zippedArchive: true,
+    silent: false, // Always write to file
+  })
+);
+
+// Separate verbose debug logs for development and test
+if (config.env === 'development' || config.env === 'test') {
+  transports.push(
+    new DailyRotateFile({
+      filename: path.join(logsDir, config.env === 'test' ? 'test-debug-%DATE%.log' : 'debug-%DATE%.log'),
+      datePattern: 'YYYY-MM-DD',
+      level: 'debug',
+      format: winston.format.combine(
+        winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
+        winston.format.errors({ stack: true }),
+        winston.format.json(),
+        winston.format.prettyPrint()
+      ),
+      maxSize: '50m',
+      maxFiles: '7d',
+      zippedArchive: true,
+      silent: false,
+    })
+  );
+}
+
+// HTTP request logs (excluding test to reduce noise)
 if (config.env !== 'test') {
-  // Error logs with daily rotation
-  transports.push(
-    new DailyRotateFile({
-      filename: path.join(logsDir, 'error-%DATE%.log'),
-      datePattern: 'YYYY-MM-DD',
-      level: 'error',
-      format: logFormat,
-      maxSize: '20m',
-      maxFiles: '30d',
-      zippedArchive: true,
-    })
-  );
-
-  // Combined logs with daily rotation (all levels)
-  transports.push(
-    new DailyRotateFile({
-      filename: path.join(logsDir, 'app-%DATE%.log'),
-      datePattern: 'YYYY-MM-DD',
-      format: logFormat,
-      maxSize: '20m',
-      maxFiles: '14d',
-      zippedArchive: true,
-    })
-  );
-
-  // Separate verbose debug logs for development
-  if (config.env === 'development') {
-    transports.push(
-      new DailyRotateFile({
-        filename: path.join(logsDir, 'debug-%DATE%.log'),
-        datePattern: 'YYYY-MM-DD',
-        level: 'debug',
-        format: winston.format.combine(
-          winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
-          winston.format.errors({ stack: true }),
-          winston.format.json(),
-          winston.format.prettyPrint()
-        ),
-        maxSize: '50m',
-        maxFiles: '7d',
-        zippedArchive: true,
-      })
-    );
-  }
-
-  // HTTP request logs
   transports.push(
     new DailyRotateFile({
       filename: path.join(logsDir, 'access-%DATE%.log'),
@@ -103,7 +114,7 @@ if (config.env !== 'test') {
 }
 
 export const logger = winston.createLogger({
-  level: config.env === 'development' ? 'debug' : 'info',
+  level: config.env === 'development' || config.env === 'test' ? 'debug' : 'info',
   format: logFormat,
   transports,
   exitOnError: false,
