@@ -72,7 +72,7 @@ describe('Auth Integration Tests', () => {
         .expect(400);
 
       expect(response.body.success).toBe(false);
-      expect(response.body.message).toContain('already registered');
+      expect(response.body.message).toContain('already exists');
     });
   });
 
@@ -115,7 +115,7 @@ describe('Auth Integration Tests', () => {
         .expect(401);
 
       expect(response.body.success).toBe(false);
-      expect(response.body.message).toContain('Invalid email or password');
+      expect(response.body.message).toContain('Invalid credentials');
     });
 
     it('should return 401 for incorrect password', async () => {
@@ -128,7 +128,7 @@ describe('Auth Integration Tests', () => {
         .expect(401);
 
       expect(response.body.success).toBe(false);
-      expect(response.body.message).toContain('Invalid email or password');
+      expect(response.body.message).toContain('Invalid credentials');
     });
 
     it('should return 400 for missing email', async () => {
