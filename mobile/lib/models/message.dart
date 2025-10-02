@@ -277,15 +277,30 @@ class Message {
   }
 
   bool get canEdit {
-    // Messages can be edited within 15 minutes of sending
-    final editWindow = Duration(minutes: 15);
+    // Messages can be edited within 24 hours of sending (backend enforced)
+    const editWindow = Duration(hours: 24);
     return DateTime.now().difference(createdAt) < editWindow && type == MessageType.text;
   }
 
   bool get canDelete {
-    // Messages can be deleted within 1 hour of sending
-    final deleteWindow = Duration(hours: 1);
+    // Messages can be deleted within 168 hours (7 days) of sending (backend enforced)
+    const deleteWindow = Duration(hours: 168);
     return DateTime.now().difference(createdAt) < deleteWindow;
+  }
+
+  String get editTimeRemaining {
+    final age = DateTime.now().difference(createdAt);
+    final remaining = 24 - age.inHours;
+    return remaining > 0 ? '$remaining hours remaining' : 'Cannot edit';
+  }
+
+  String get deleteTimeRemaining {
+    final age = DateTime.now().difference(createdAt);
+    final remaining = 168 - age.inHours;
+    if (remaining > 24) {
+      return '${(remaining / 24).ceil()} days remaining';
+    }
+    return remaining > 0 ? '$remaining hours remaining' : 'Cannot delete';
   }
 
   String? get fileSizeFormatted {
