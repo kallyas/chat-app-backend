@@ -12,6 +12,8 @@ const envVarsSchema = Joi.object({
   RATE_LIMIT_WINDOW_MS: Joi.number().default(15 * 60 * 1000),
   RATE_LIMIT_MAX_REQUESTS: Joi.number().default(100),
   ALLOWED_ORIGINS: Joi.string().default('http://localhost:3000,http://localhost:3001'),
+  MESSAGE_EDIT_TIME_LIMIT_HOURS: Joi.number().default(24), // 24 hours
+  MESSAGE_DELETE_TIME_LIMIT_HOURS: Joi.number().default(168), // 7 days (168 hours)
 }).unknown();
 
 const { error, value: envVars } = envVarsSchema.validate(process.env) as { error?: Joi.ValidationError; value: Record<string, string | number> };
@@ -36,5 +38,11 @@ export const config = {
   },
   cors: {
     origins: (envVars.ALLOWED_ORIGINS as string).split(',').map((origin: string) => origin.trim()),
+  },
+  messages: {
+    editTimeLimitMs: (envVars.MESSAGE_EDIT_TIME_LIMIT_HOURS as number) * 60 * 60 * 1000,
+    deleteTimeLimitMs: (envVars.MESSAGE_DELETE_TIME_LIMIT_HOURS as number) * 60 * 60 * 1000,
+    editTimeLimitHours: envVars.MESSAGE_EDIT_TIME_LIMIT_HOURS as number,
+    deleteTimeLimitHours: envVars.MESSAGE_DELETE_TIME_LIMIT_HOURS as number,
   },
 };
