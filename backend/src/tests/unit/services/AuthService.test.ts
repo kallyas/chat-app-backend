@@ -163,29 +163,29 @@ describe('AuthService', () => {
     });
 
     it('should search users by username', async () => {
-      const users = await AuthService.searchUsers('john', currentUserId, 'username');
+      const result = await AuthService.searchUsers('john', currentUserId, 'username');
 
-      expect(users).toHaveLength(1);
-      expect(users[0].username).toBe('johndoe');
+      expect(result.users).toHaveLength(1);
+      expect(result.users[0].username).toBe('johndoe');
     });
 
     it('should search users by email', async () => {
-      const users = await AuthService.searchUsers('jane@example.com', currentUserId, 'email');
+      const result = await AuthService.searchUsers('jane@example.com', currentUserId, 'email');
 
-      expect(users).toHaveLength(1);
-      expect(users[0].email).toBe('jane@example.com');
+      expect(result.users).toHaveLength(1);
+      expect(result.users[0].email).toBe('jane@example.com');
     });
 
     it('should search users by both username and email', async () => {
-      const users = await AuthService.searchUsers('doe', currentUserId, 'both');
+      const result = await AuthService.searchUsers('doe', currentUserId, 'both');
 
-      expect(users).toHaveLength(2);
+      expect(result.users).toHaveLength(2);
     });
 
     it('should exclude current user from results', async () => {
-      const users = await AuthService.searchUsers('test', currentUserId, 'both');
+      const result = await AuthService.searchUsers('test', currentUserId, 'both');
 
-      expect(users).toHaveLength(0);
+      expect(result.users).toHaveLength(0);
     });
   });
 });
