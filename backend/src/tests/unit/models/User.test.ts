@@ -87,7 +87,9 @@ describe('User Model', () => {
 
     it('should hash password before saving', () => {
       expect(user.password).not.toBe(validUserData.password);
-      expect(user.password.length).toBeGreaterThan(validUserData.password.length);
+      expect(user.password.length).toBeGreaterThan(
+        validUserData.password.length
+      );
     });
 
     it('should compare password correctly', async () => {
