@@ -1,8 +1,9 @@
 import mongoose from 'mongoose';
 import { ChatRoom, IChatRoom, ChatRoomType, Message, IMessage, MessageType, User, IUser } from '@/models';
 import { AppError } from '@/middleware';
-import { toObjectId, getPaginationInfo } from '@/utils';
+import { toObjectId, getPaginationInfo, validatePagination, calculateSkip } from '@/utils';
 import { logger } from '@/config/logger';
+import { config } from '@/config/environment';
 import { CreateChatRoomData, SendMessageData, GetMessagesQuery } from '@/types';
 
 export class ChatService {
@@ -30,18 +31,40 @@ export class ChatService {
           throw new AppError('Private chat must have exactly 2 participants', 400);
         }
 
+        // Sort participants to ensure consistent ordering for index optimization
+        const sortedParticipants = participants.map(p => toObjectId(p)).sort((a, b) =>
+          a.toString().localeCompare(b.toString())
+        );
+
         const existingRoom = await ChatRoom.findOne({
           type: ChatRoomType.PRIVATE,
-          participants: { $all: participants, $size: 2 }
+          participants: sortedParticipants
         });
 
         if (existingRoom) {
           return existingRoom;
         }
+
+        // Use sorted participants for consistent index matching
+        const chatRoom = new ChatRoom({
+          name: name || (type === ChatRoomType.PRIVATE ? undefined : name),
+          type,
+          participants: sortedParticipants,
+          createdBy: toObjectId(createdBy),
+          description,
+        });
+
+        await chatRoom.save();
+        await chatRoom.populate('participants', 'username email profilePic isOnline');
+        await chatRoom.populate('createdBy', 'username email profilePic');
+
+        logger.info(`New private chat room created: ${chatRoom._id}`);
+        return chatRoom;
       }
 
+      // For group chats, no need to sort participants
       const chatRoom = new ChatRoom({
-        name: name || (type === ChatRoomType.PRIVATE ? undefined : name),
+        name,
         type,
         participants: participants.map(p => toObjectId(p)),
         createdBy: toObjectId(createdBy),
@@ -66,31 +89,125 @@ export class ChatService {
 
   static async getUserChatRooms(
     userId: string,
-    page: number = 1,
-    limit: number = 20
-  ): Promise<{ chatRooms: IChatRoom[], total: number, totalPages: number, hasNext: boolean, hasPrev: boolean }> {
+    page: any = 1,
+    limit: any = 20
+  ): Promise<{ chatRooms: any[], total: number, totalPages: number, hasNext: boolean, hasPrev: boolean }> {
     try {
-      const skip = (page - 1) * limit;
-      
-      const query = {
-        participants: toObjectId(userId),
-        isActive: true,
-      };
+      // Validate pagination parameters
+      const { page: validPage, limit: validLimit } = validatePagination(page, limit);
+      const skip = calculateSkip(validPage, validLimit);
+      const userObjectId = toObjectId(userId);
 
-      const [chatRooms, total] = await Promise.all([
-        ChatRoom.find(query)
-          .populate('participants', 'username email profilePic isOnline lastSeen')
-          .populate('createdBy', 'username email profilePic')
-          .populate('lastMessage.sender', 'username profilePic')
-          .sort({ 'lastMessage.timestamp': -1, updatedAt: -1 })
-          .skip(skip)
-          .limit(limit),
-        ChatRoom.countDocuments(query)
+      // Use aggregation pipeline to avoid N+1 queries
+      const [chatRoomsResult] = await ChatRoom.aggregate([
+        // Match chat rooms for this user
+        {
+          $match: {
+            participants: userObjectId,
+            isActive: true,
+          }
+        },
+        // Get total count
+        {
+          $facet: {
+            metadata: [{ $count: 'total' }],
+            chatRooms: [
+              // Sort by last message timestamp
+              { $sort: { 'lastMessage.timestamp': -1, updatedAt: -1 } },
+              { $skip: skip },
+              { $limit: validLimit },
+              // Lookup participants
+              {
+                $lookup: {
+                  from: 'users',
+                  localField: 'participants',
+                  foreignField: '_id',
+                  as: 'participantDetails'
+                }
+              },
+              // Lookup createdBy
+              {
+                $lookup: {
+                  from: 'users',
+                  localField: 'createdBy',
+                  foreignField: '_id',
+                  as: 'createdByDetails'
+                }
+              },
+              // Lookup lastMessage sender
+              {
+                $lookup: {
+                  from: 'users',
+                  localField: 'lastMessage.sender',
+                  foreignField: '_id',
+                  as: 'lastMessageSenderDetails'
+                }
+              },
+              // Project only needed fields
+              {
+                $project: {
+                  name: 1,
+                  type: 1,
+                  isActive: 1,
+                  createdAt: 1,
+                  updatedAt: 1,
+                  participants: {
+                    $map: {
+                      input: '$participantDetails',
+                      as: 'p',
+                      in: {
+                        _id: '$$p._id',
+                        username: '$$p.username',
+                        email: '$$p.email',
+                        profilePic: '$$p.profilePic',
+                        isOnline: '$$p.isOnline',
+                        lastSeen: '$$p.lastSeen'
+                      }
+                    }
+                  },
+                  createdBy: {
+                    $let: {
+                      vars: { creator: { $arrayElemAt: ['$createdByDetails', 0] } },
+                      in: {
+                        _id: '$$creator._id',
+                        username: '$$creator.username',
+                        email: '$$creator.email',
+                        profilePic: '$$creator.profilePic'
+                      }
+                    }
+                  },
+                  lastMessage: {
+                    $cond: {
+                      if: { $gt: ['$lastMessage', null] },
+                      then: {
+                        content: '$lastMessage.content',
+                        timestamp: '$lastMessage.timestamp',
+                        sender: {
+                          $let: {
+                            vars: { senderData: { $arrayElemAt: ['$lastMessageSenderDetails', 0] } },
+                            in: {
+                              _id: '$$senderData._id',
+                              username: '$$senderData.username',
+                              profilePic: '$$senderData.profilePic'
+                            }
+                          }
+                        }
+                      },
+                      else: null
+                    }
+                  }
+                }
+              }
+            ]
+          }
+        }
       ]);
 
-      const totalPages = Math.ceil(total / limit);
-      const hasNext = page < totalPages;
-      const hasPrev = page > 1;
+      const total = chatRoomsResult.metadata[0]?.total || 0;
+      const chatRooms = chatRoomsResult.chatRooms || [];
+      const totalPages = Math.ceil(total / validLimit);
+      const hasNext = validPage < totalPages;
+      const hasPrev = validPage > 1;
 
       return {
         chatRooms,
@@ -193,7 +310,10 @@ export class ChatService {
     pagination: Record<string, any>;
   }> {
     try {
-      const { page = 1, limit = 20, before } = query;
+      const { before } = query;
+
+      // Validate pagination parameters
+      const { page: validPage, limit: validLimit } = validatePagination(query.page, query.limit);
 
       // Verify user has access to chat room
       const chatRoom = await ChatRoom.findOne({
@@ -225,10 +345,10 @@ export class ChatService {
           populate: { path: 'senderId', select: 'username' }
         })
         .sort({ createdAt: -1 })
-        .limit(limit)
-        .skip((page - 1) * limit);
+        .limit(validLimit)
+        .skip(calculateSkip(validPage, validLimit));
 
-      const pagination = getPaginationInfo(page, limit, totalMessages);
+      const pagination = getPaginationInfo(validPage, validLimit, totalMessages);
 
       return { messages: messages.reverse(), pagination };
     } catch (error) {
@@ -401,12 +521,14 @@ export class ChatService {
         throw new AppError('Message not found or access denied', 404);
       }
 
-      // Check if message is older than 24 hours (optional business rule)
+      // Check if message is within edit time limit
       const messageAge = Date.now() - message.createdAt.getTime();
-      const maxEditTime = 24 * 60 * 60 * 1000; // 24 hours
 
-      if (messageAge > maxEditTime) {
-        throw new AppError('Message is too old to edit', 400);
+      if (messageAge > config.messages.editTimeLimitMs) {
+        throw new AppError(
+          `Messages can only be edited within ${config.messages.editTimeLimitHours} hours`,
+          400
+        );
       }
 
       await message.editContent(newContent);
@@ -433,6 +555,16 @@ export class ChatService {
 
       if (!message) {
         throw new AppError('Message not found or access denied', 404);
+      }
+
+      // Check if message is within delete time limit
+      const messageAge = Date.now() - message.createdAt.getTime();
+
+      if (messageAge > config.messages.deleteTimeLimitMs) {
+        throw new AppError(
+          `Messages can only be deleted within ${config.messages.deleteTimeLimitHours} hours`,
+          400
+        );
       }
 
       await Message.findByIdAndDelete(messageId);
