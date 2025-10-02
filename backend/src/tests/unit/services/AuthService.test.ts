@@ -111,7 +111,10 @@ describe('AuthService', () => {
         profilePic: 'http://example.com/pic.jpg',
       };
 
-      const updatedUser = await AuthService.updateUserProfile(userId, updateData);
+      const updatedUser = await AuthService.updateUserProfile(
+        userId,
+        updateData
+      );
 
       expect(updatedUser.username).toBe(updateData.username);
       expect(updatedUser.profilePic).toBe(updateData.profilePic);
@@ -163,27 +166,43 @@ describe('AuthService', () => {
     });
 
     it('should search users by username', async () => {
-      const result = await AuthService.searchUsers('john', currentUserId, 'username');
+      const result = await AuthService.searchUsers(
+        'john',
+        currentUserId,
+        'username'
+      );
 
       expect(result.users).toHaveLength(1);
       expect(result.users[0].username).toBe('johndoe');
     });
 
     it('should search users by email', async () => {
-      const result = await AuthService.searchUsers('jane@example.com', currentUserId, 'email');
+      const result = await AuthService.searchUsers(
+        'jane@example.com',
+        currentUserId,
+        'email'
+      );
 
       expect(result.users).toHaveLength(1);
       expect(result.users[0].email).toBe('jane@example.com');
     });
 
     it('should search users by both username and email', async () => {
-      const result = await AuthService.searchUsers('doe', currentUserId, 'both');
+      const result = await AuthService.searchUsers(
+        'doe',
+        currentUserId,
+        'both'
+      );
 
       expect(result.users).toHaveLength(2);
     });
 
     it('should exclude current user from results', async () => {
-      const result = await AuthService.searchUsers('test', currentUserId, 'both');
+      const result = await AuthService.searchUsers(
+        'test',
+        currentUserId,
+        'both'
+      );
 
       expect(result.users).toHaveLength(0);
     });
