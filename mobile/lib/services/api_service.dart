@@ -241,6 +241,20 @@ class _AuthInterceptor extends Interceptor {
     ErrorInterceptorHandler handler,
   ) async {
     if (err.response?.statusCode == 401) {
+      final responseData = err.response?.data;
+
+      // Check if token has been invalidated (password change, etc.)
+      if (responseData is Map<String, dynamic>) {
+        final message = responseData['message']?.toString().toLowerCase() ?? '';
+        if (message.contains('invalidated') || message.contains('token has been')) {
+          // Token was invalidated, clear everything and don't retry
+          await StorageService.clearAuthTokens();
+          print('⚠️ Token invalidated by server - user must login again');
+          handler.next(err);
+          return;
+        }
+      }
+
       // Try to refresh token
       final refreshToken = await StorageService.getRefreshToken();
       if (refreshToken != null) {
@@ -282,6 +296,9 @@ class _AuthInterceptor extends Interceptor {
           // Refresh failed, clear tokens
           await StorageService.clearAuthTokens();
         }
+      } else {
+        // No refresh token available, clear tokens
+        await StorageService.clearAuthTokens();
       }
     }
     handler.next(err);
