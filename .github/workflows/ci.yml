@@ -65,15 +65,12 @@ jobs:
       if: matrix.node-version == 20
       run: cd backend && yarn test:coverage
 
-    - name: Upload coverage to Codecov (Node 20 only)
+    - name: Upload coverage reports to Codecov
       if: matrix.node-version == 20
-      uses: codecov/codecov-action@v4
+      uses: codecov/codecov-action@v5
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
-        files: ./backend/coverage/lcov.info
-        flags: unittests
-        name: codecov-${{ matrix.node-version }}
-        fail_ci_if_error: false
+        slug: kallyas/chat-app-backend
 
     - name: Upload test logs
       if: failure()
