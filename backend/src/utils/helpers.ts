@@ -1,10 +1,16 @@
 import crypto from 'crypto';
 import mongoose from 'mongoose';
 
-export const generateResetToken = (): { token: string; hashedToken: string } => {
+export const generateResetToken = (): {
+  token: string;
+  hashedToken: string;
+} => {
   const resetToken = crypto.randomBytes(32).toString('hex');
-  const hashedToken = crypto.createHash('sha256').update(resetToken).digest('hex');
-  
+  const hashedToken = crypto
+    .createHash('sha256')
+    .update(resetToken)
+    .digest('hex');
+
   return { token: resetToken, hashedToken };
 };
 
@@ -30,23 +36,29 @@ export const toObjectId = (id: string): mongoose.Types.ObjectId => {
 
 export const formatError = (error: Record<string, unknown>): string => {
   if (error.name === 'ValidationError') {
-    const errors = Object.values(error.errors as Record<string, { message: string }>).map((err) => err.message);
+    const errors = Object.values(
+      error.errors as Record<string, { message: string }>
+    ).map(err => err.message);
     return errors.join('. ');
   }
-  
+
   if (error.code === 11000) {
     const field = Object.keys(error.keyValue as Record<string, unknown>)[0];
     return `${field} already exists`;
   }
-  
+
   return (error.message as string) || 'An error occurred';
 };
 
-export const getPaginationInfo = (page: number, limit: number, total: number) => {
+export const getPaginationInfo = (
+  page: number,
+  limit: number,
+  total: number
+) => {
   const totalPages = Math.ceil(total / limit);
   const hasNextPage = page < totalPages;
   const hasPrevPage = page > 1;
-  
+
   return {
     currentPage: page,
     totalPages,
@@ -91,11 +103,14 @@ export const getFileExtension = (filename: string): string => {
 export const formatFileSize = (bytes: number): string => {
   const sizes = ['Bytes', 'KB', 'MB', 'GB'];
   if (bytes === 0) return '0 Bytes';
-  
+
   const i = Math.floor(Math.log(bytes) / Math.log(1024));
-  return Math.round(bytes / Math.pow(1024, i) * 100) / 100 + ' ' + sizes[i];
+  return Math.round((bytes / Math.pow(1024, i)) * 100) / 100 + ' ' + sizes[i];
 };
 
 export const generateRandomString = (length: number): string => {
-  return crypto.randomBytes(Math.ceil(length / 2)).toString('hex').slice(0, length);
+  return crypto
+    .randomBytes(Math.ceil(length / 2))
+    .toString('hex')
+    .slice(0, length);
 };
