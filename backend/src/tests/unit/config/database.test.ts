@@ -24,7 +24,9 @@ describe('Database', () => {
 
   describe('connect', () => {
     it('should connect successfully with provided URI', async () => {
-      const mockConnect = jest.spyOn(mongoose, 'connect').mockResolvedValue(mongoose as any);
+      const mockConnect = jest
+        .spyOn(mongoose, 'connect')
+        .mockResolvedValue(mongoose as any);
 
       await database.connect();
 
@@ -35,7 +37,9 @@ describe('Database', () => {
 
   describe('disconnect', () => {
     it('should disconnect from MongoDB', async () => {
-      const mockDisconnect = jest.spyOn(mongoose, 'disconnect').mockResolvedValue();
+      const mockDisconnect = jest
+        .spyOn(mongoose, 'disconnect')
+        .mockResolvedValue();
 
       await database.disconnect();
 
