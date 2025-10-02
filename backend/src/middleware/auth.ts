@@ -25,11 +25,20 @@ export const authenticateToken = async (
     const decoded = jwt.verify(token, config.jwt.secret) as JWTPayload;
 
     const user = await User.findById(decoded.id).select('-password');
-    
+
     if (!user) {
       res.status(401).json({
         success: false,
         message: 'Invalid token - user not found',
+      });
+      return;
+    }
+
+    // Validate token version to detect invalidated tokens
+    if (decoded.tokenVersion !== undefined && decoded.tokenVersion !== user.tokenVersion) {
+      res.status(401).json({
+        success: false,
+        message: 'Token has been invalidated. Please login again.',
       });
       return;
     }
@@ -108,6 +117,7 @@ export const generateAccessToken = (user: IUser): string => {
     id: user._id.toString(),
     email: user.email,
     username: user.username,
+    tokenVersion: user.tokenVersion,
   };
 
   return jwt.sign(payload, config.jwt.secret, {
@@ -120,6 +130,7 @@ export const generateRefreshToken = (user: IUser): string => {
     id: user._id.toString(),
     email: user.email,
     username: user.username,
+    tokenVersion: user.tokenVersion,
   };
 
   return jwt.sign(payload, config.jwt.secret, {
