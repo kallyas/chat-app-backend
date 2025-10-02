@@ -33,8 +33,16 @@ export const setupChatEvents = (io: Server, socket: AuthenticatedSocket) => {
   socket.on('joinRoom', async (data: JoinRoomData) => {
     try {
       // Rate limit check
-      if (!socketRateLimiter.checkUser(socket.userId!, 'joinRoom', SOCKET_RATE_LIMITS.joinRoom)) {
-        socket.emit('error', { message: 'Rate limit exceeded. Please slow down.' });
+      if (
+        !socketRateLimiter.checkUser(
+          socket.userId!,
+          'joinRoom',
+          SOCKET_RATE_LIMITS.joinRoom
+        )
+      ) {
+        socket.emit('error', {
+          message: 'Rate limit exceeded. Please slow down.',
+        });
         return;
       }
 
@@ -86,8 +94,16 @@ export const setupChatEvents = (io: Server, socket: AuthenticatedSocket) => {
   socket.on('leaveRoom', async (data: JoinRoomData) => {
     try {
       // Rate limit check
-      if (!socketRateLimiter.checkUser(socket.userId!, 'leaveRoom', SOCKET_RATE_LIMITS.leaveRoom)) {
-        socket.emit('error', { message: 'Rate limit exceeded. Please slow down.' });
+      if (
+        !socketRateLimiter.checkUser(
+          socket.userId!,
+          'leaveRoom',
+          SOCKET_RATE_LIMITS.leaveRoom
+        )
+      ) {
+        socket.emit('error', {
+          message: 'Rate limit exceeded. Please slow down.',
+        });
         return;
       }
 
@@ -126,14 +142,22 @@ export const setupChatEvents = (io: Server, socket: AuthenticatedSocket) => {
   socket.on('sendMessage', async (data: SocketSendMessageData) => {
     try {
       // Rate limit check
-      if (!socketRateLimiter.checkUser(socket.userId!, 'sendMessage', SOCKET_RATE_LIMITS.sendMessage)) {
-        socket.emit('error', { message: 'Rate limit exceeded. Please slow down.' });
+      if (
+        !socketRateLimiter.checkUser(
+          socket.userId!,
+          'sendMessage',
+          SOCKET_RATE_LIMITS.sendMessage
+        )
+      ) {
+        socket.emit('error', {
+          message: 'Rate limit exceeded. Please slow down.',
+        });
         return;
       }
 
       // Extract roomId separately for validation
       const { roomId, ...messageContent } = data;
-      
+
       // Validate room ID format
       const roomValidation = objectIdSchema.validate(roomId);
       if (roomValidation.error) {
@@ -173,8 +197,16 @@ export const setupChatEvents = (io: Server, socket: AuthenticatedSocket) => {
   socket.on('typing', async (data: TypingData) => {
     try {
       // Rate limit check
-      if (!socketRateLimiter.checkUser(socket.userId!, 'typing', SOCKET_RATE_LIMITS.typing)) {
-        socket.emit('error', { message: 'Rate limit exceeded. Please slow down.' });
+      if (
+        !socketRateLimiter.checkUser(
+          socket.userId!,
+          'typing',
+          SOCKET_RATE_LIMITS.typing
+        )
+      ) {
+        socket.emit('error', {
+          message: 'Rate limit exceeded. Please slow down.',
+        });
         return;
       }
 
@@ -211,7 +243,6 @@ export const setupChatEvents = (io: Server, socket: AuthenticatedSocket) => {
         isTyping,
         timestamp: new Date(),
       });
-
     } catch (error) {
       logger.error('Error in typing event:', error);
       socket.emit('error', { message: 'Failed to update typing status' });
@@ -222,8 +253,16 @@ export const setupChatEvents = (io: Server, socket: AuthenticatedSocket) => {
   socket.on('stopTyping', (data: { roomId: string }) => {
     try {
       // Rate limit check
-      if (!socketRateLimiter.checkUser(socket.userId!, 'stopTyping', SOCKET_RATE_LIMITS.stopTyping)) {
-        socket.emit('error', { message: 'Rate limit exceeded. Please slow down.' });
+      if (
+        !socketRateLimiter.checkUser(
+          socket.userId!,
+          'stopTyping',
+          SOCKET_RATE_LIMITS.stopTyping
+        )
+      ) {
+        socket.emit('error', {
+          message: 'Rate limit exceeded. Please slow down.',
+        });
         return;
       }
 
@@ -235,7 +274,6 @@ export const setupChatEvents = (io: Server, socket: AuthenticatedSocket) => {
         isTyping: false,
         timestamp: new Date(),
       });
-
     } catch (error) {
       logger.error('Error in stopTyping event:', error);
     }
@@ -245,8 +283,16 @@ export const setupChatEvents = (io: Server, socket: AuthenticatedSocket) => {
   socket.on('messageRead', async (data: MessageReadData) => {
     try {
       // Rate limit check
-      if (!socketRateLimiter.checkUser(socket.userId!, 'messageRead', SOCKET_RATE_LIMITS.messageRead)) {
-        socket.emit('error', { message: 'Rate limit exceeded. Please slow down.' });
+      if (
+        !socketRateLimiter.checkUser(
+          socket.userId!,
+          'messageRead',
+          SOCKET_RATE_LIMITS.messageRead
+        )
+      ) {
+        socket.emit('error', {
+          message: 'Rate limit exceeded. Please slow down.',
+        });
         return;
       }
 
@@ -271,7 +317,6 @@ export const setupChatEvents = (io: Server, socket: AuthenticatedSocket) => {
         username: socket.username,
         readAt: new Date(),
       });
-
     } catch (error) {
       logger.error('Error in messageRead event:', error);
       socket.emit('error', { message: 'Failed to mark message as read' });
@@ -279,44 +324,55 @@ export const setupChatEvents = (io: Server, socket: AuthenticatedSocket) => {
   });
 
   // Handle user online status
-  socket.on('updateStatus', async (data: { status: 'online' | 'offline' | 'away' }) => {
-    try {
-      // Rate limit check
-      if (!socketRateLimiter.checkUser(socket.userId!, 'updateStatus', SOCKET_RATE_LIMITS.updateStatus)) {
-        socket.emit('error', { message: 'Rate limit exceeded. Please slow down.' });
-        return;
+  socket.on(
+    'updateStatus',
+    async (data: { status: 'online' | 'offline' | 'away' }) => {
+      try {
+        // Rate limit check
+        if (
+          !socketRateLimiter.checkUser(
+            socket.userId!,
+            'updateStatus',
+            SOCKET_RATE_LIMITS.updateStatus
+          )
+        ) {
+          socket.emit('error', {
+            message: 'Rate limit exceeded. Please slow down.',
+          });
+          return;
+        }
+
+        const { status } = data;
+
+        if (!['online', 'offline', 'away'].includes(status)) {
+          socket.emit('error', { message: 'Invalid status' });
+          return;
+        }
+
+        // Update user status in database
+        await User.findByIdAndUpdate(socket.userId, {
+          isOnline: status === 'online',
+          lastSeen: new Date(),
+        });
+
+        // Broadcast status change to all connected clients
+        socket.broadcast.emit('userStatusChanged', {
+          userId: socket.userId,
+          username: socket.username,
+          status,
+          timestamp: new Date(),
+        });
+
+        logger.info(`User ${socket.username} status changed to ${status}`);
+      } catch (error) {
+        logger.error('Error in updateStatus event:', error);
+        socket.emit('error', { message: 'Failed to update status' });
       }
-
-      const { status } = data;
-
-      if (!['online', 'offline', 'away'].includes(status)) {
-        socket.emit('error', { message: 'Invalid status' });
-        return;
-      }
-
-      // Update user status in database
-      await User.findByIdAndUpdate(socket.userId, {
-        isOnline: status === 'online',
-        lastSeen: new Date(),
-      });
-
-      // Broadcast status change to all connected clients
-      socket.broadcast.emit('userStatusChanged', {
-        userId: socket.userId,
-        username: socket.username,
-        status,
-        timestamp: new Date(),
-      });
-
-      logger.info(`User ${socket.username} status changed to ${status}`);
-    } catch (error) {
-      logger.error('Error in updateStatus event:', error);
-      socket.emit('error', { message: 'Failed to update status' });
     }
-  });
+  );
 
   // Handle disconnect
-  socket.on('disconnect', async (reason) => {
+  socket.on('disconnect', async reason => {
     try {
       // Decrement socket count and update status
       if (socket.userId) {
@@ -354,7 +410,7 @@ export const setupChatEvents = (io: Server, socket: AuthenticatedSocket) => {
   });
 
   // Handle errors
-  socket.on('error', (error) => {
+  socket.on('error', error => {
     logger.error(`Socket error for user ${socket.username}:`, error);
   });
 };
