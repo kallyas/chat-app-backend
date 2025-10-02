@@ -4,7 +4,11 @@ import { Request, Response } from 'express';
 /**
  * Log HTTP requests with detailed information
  */
-export const logHttpRequest = (req: Request, res: Response, responseTime?: number) => {
+export const logHttpRequest = (
+  req: Request,
+  res: Response,
+  responseTime?: number
+) => {
   const logData = {
     method: req.method,
     url: req.originalUrl,
@@ -42,7 +46,11 @@ export const logUserAction = (
  * Log security events
  */
 export const logSecurityEvent = (
-  event: 'LOGIN_SUCCESS' | 'LOGIN_FAILURE' | 'UNAUTHORIZED_ACCESS' | 'TOKEN_VALIDATION_FAILED',
+  event:
+    | 'LOGIN_SUCCESS'
+    | 'LOGIN_FAILURE'
+    | 'UNAUTHORIZED_ACCESS'
+    | 'TOKEN_VALIDATION_FAILED',
   details: Record<string, any>
 ) => {
   logger.warn('Security Event', {
@@ -117,13 +125,13 @@ export const logPerformanceMetric = (
  */
 export const createContextLogger = (context: Record<string, any>) => {
   return {
-    info: (message: string, meta?: Record<string, any>) => 
+    info: (message: string, meta?: Record<string, any>) =>
       logger.info(message, { ...context, ...meta }),
-    warn: (message: string, meta?: Record<string, any>) => 
+    warn: (message: string, meta?: Record<string, any>) =>
       logger.warn(message, { ...context, ...meta }),
-    error: (message: string, meta?: Record<string, any>) => 
+    error: (message: string, meta?: Record<string, any>) =>
       logger.error(message, { ...context, ...meta }),
-    debug: (message: string, meta?: Record<string, any>) => 
+    debug: (message: string, meta?: Record<string, any>) =>
       logger.debug(message, { ...context, ...meta }),
   };
 };
