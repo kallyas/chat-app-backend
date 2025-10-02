@@ -11,6 +11,14 @@ class SocketService {
   bool _isConnected = false;
   String? _currentUserId;
 
+  // Typing indicator throttling (max 10 per minute = 1 per 6 seconds)
+  DateTime? _lastTypingEvent;
+  static const Duration _typingThrottle = Duration(seconds: 6);
+
+  // Rate limiting tracking
+  final Map<String, int> _eventCounts = {};
+  final Map<String, DateTime> _eventTimestamps = {};
+
   // Event callbacks
   Function(Map<String, dynamic>)? onNewMessage;
   Function(Map<String, dynamic>)? onUserJoined;
@@ -83,7 +91,20 @@ class SocketService {
     _socket!.on(SocketConfig.connectError, (data) {
       _isConnected = false;
       print('❌ Socket connection error: $data');
-      onError?.call('Connection error: $data');
+
+      // Check for token invalidation errors
+      final errorMessage = data.toString().toLowerCase();
+      if (errorMessage.contains('invalidated') ||
+          errorMessage.contains('token has been') ||
+          errorMessage.contains('authentication failed')) {
+        print('⚠️ Socket auth failed - token may be invalidated');
+        onError?.call('Your session has expired. Please login again.');
+        // Clear tokens and disconnect
+        StorageService.clearAuthTokens();
+        disconnect();
+      } else {
+        onError?.call('Connection error: $data');
+      }
     });
 
     // Chat events
@@ -119,7 +140,18 @@ class SocketService {
 
     _socket!.on(SocketConfig.error, (data) {
       print('❌ Socket error: $data');
-      onError?.call(data.toString());
+
+      // Check for rate limiting errors
+      final errorMessage = data.toString().toLowerCase();
+      if (errorMessage.contains('rate limit')) {
+        print('⚠️ Rate limit exceeded');
+        onError?.call('You\'re sending messages too quickly. Please slow down.');
+      } else if (errorMessage.contains('room not found') ||
+          errorMessage.contains('access denied')) {
+        onError?.call('Room access denied or not found');
+      } else {
+        onError?.call(data.toString());
+      }
     });
   }
 
@@ -174,10 +206,19 @@ class SocketService {
     print('📤 Sending message: $messageData');
   }
 
-  // Send typing indicator
+  // Send typing indicator (throttled to max 10/min = 1 per 6 seconds)
   void startTyping(String roomId) {
     if (_socket == null || !_isConnected) return;
 
+    // Throttle typing events to prevent rate limiting
+    final now = DateTime.now();
+    if (_lastTypingEvent != null &&
+        now.difference(_lastTypingEvent!) < _typingThrottle) {
+      print('⏱️ Typing event throttled - too soon since last event');
+      return; // Skip this event
+    }
+
+    _lastTypingEvent = now;
     _socket!.emit(SocketConfig.typing, {
       'roomId': roomId,
       'isTyping': true,
