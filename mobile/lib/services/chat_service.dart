@@ -19,12 +19,15 @@ class ChatService {
     int limit = 20,
   }) async {
     try {
+      // Enforce max limit of 100 as per backend
+      final validLimit = limit > 100 ? 100 : limit;
+
       final response = await _apiService.get<PaginatedResponse<User>>(
         ApiConfig.searchUsers,
         queryParameters: {
           'query': query,
           'page': page,
-          'limit': limit,
+          'limit': validLimit,
         },
         fromJson: (json) => PaginatedResponse.fromJson(
           json,
@@ -47,11 +50,14 @@ class ChatService {
     int limit = 20,
   }) async {
     try {
+      // Enforce max limit of 100 as per backend
+      final validLimit = limit > 100 ? 100 : limit;
+
       final response = await _apiService.get<PaginatedResponse<User>>(
         ApiConfig.onlineUsers,
         queryParameters: {
           'page': page,
-          'limit': limit,
+          'limit': validLimit,
         },
         fromJson: (json) => PaginatedResponse.fromJson(
           json,
@@ -138,11 +144,14 @@ class ChatService {
     int limit = 20,
   }) async {
     try {
+      // Enforce max limit of 100 as per backend
+      final validLimit = limit > 100 ? 100 : limit;
+
       final response = await _apiService.get<PaginatedResponse<ChatRoom>>(
         ApiConfig.getUserChatRooms,
         queryParameters: {
           'page': page,
-          'limit': limit,
+          'limit': validLimit,
         },
         fromJson: (json) => PaginatedResponse.fromJson(
           json,
@@ -275,9 +284,12 @@ class ChatService {
     String? before,
   }) async {
     try {
+      // Enforce max limit of 100 as per backend
+      final validLimit = limit > 100 ? 100 : limit;
+
       final queryParams = {
         'page': page,
-        'limit': limit,
+        'limit': validLimit,
         if (before != null) 'before': before,
       };
 
@@ -313,6 +325,14 @@ class ChatService {
 
       return response;
     } catch (e) {
+      // Handle specific error for time limit exceeded
+      final errorMessage = e.toString();
+      if (errorMessage.contains('24 hours') || errorMessage.contains('too old to edit')) {
+        return ApiResponse.error(
+          message: 'Messages can only be edited within 24 hours',
+          code: 'EDIT_TIME_LIMIT_EXCEEDED',
+        );
+      }
       return ApiResponse.error(
         message: 'Failed to edit message: ${e.toString()}',
         code: 'EDIT_MESSAGE_ERROR',
@@ -328,6 +348,14 @@ class ChatService {
 
       return response;
     } catch (e) {
+      // Handle specific error for time limit exceeded
+      final errorMessage = e.toString();
+      if (errorMessage.contains('168 hours') || errorMessage.contains('too old to delete')) {
+        return ApiResponse.error(
+          message: 'Messages can only be deleted within 168 hours (7 days)',
+          code: 'DELETE_TIME_LIMIT_EXCEEDED',
+        );
+      }
       return ApiResponse.error(
         message: 'Failed to delete message: ${e.toString()}',
         code: 'DELETE_MESSAGE_ERROR',
