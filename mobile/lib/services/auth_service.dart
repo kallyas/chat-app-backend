@@ -274,8 +274,9 @@ class AuthService {
   }
 
   // Validate email format
+  // Updated to match backend: allows modern TLDs and plus-addressing
   static bool isValidEmail(String email) {
-    return RegExp(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$')
+    return RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]+$')
         .hasMatch(email);
   }
 
