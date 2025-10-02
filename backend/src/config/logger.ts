@@ -50,7 +50,10 @@ if (config.env === 'development') {
 // Error logs with daily rotation
 transports.push(
   new DailyRotateFile({
-    filename: path.join(logsDir, config.env === 'test' ? 'test-error-%DATE%.log' : 'error-%DATE%.log'),
+    filename: path.join(
+      logsDir,
+      config.env === 'test' ? 'test-error-%DATE%.log' : 'error-%DATE%.log'
+    ),
     datePattern: 'YYYY-MM-DD',
     level: 'error',
     format: logFormat,
@@ -64,7 +67,10 @@ transports.push(
 // Combined logs with daily rotation (all levels)
 transports.push(
   new DailyRotateFile({
-    filename: path.join(logsDir, config.env === 'test' ? 'test-app-%DATE%.log' : 'app-%DATE%.log'),
+    filename: path.join(
+      logsDir,
+      config.env === 'test' ? 'test-app-%DATE%.log' : 'app-%DATE%.log'
+    ),
     datePattern: 'YYYY-MM-DD',
     format: logFormat,
     maxSize: '20m',
@@ -78,7 +84,10 @@ transports.push(
 if (config.env === 'development' || config.env === 'test') {
   transports.push(
     new DailyRotateFile({
-      filename: path.join(logsDir, config.env === 'test' ? 'test-debug-%DATE%.log' : 'debug-%DATE%.log'),
+      filename: path.join(
+        logsDir,
+        config.env === 'test' ? 'test-debug-%DATE%.log' : 'debug-%DATE%.log'
+      ),
       datePattern: 'YYYY-MM-DD',
       level: 'debug',
       format: winston.format.combine(
@@ -114,7 +123,8 @@ if (config.env !== 'test') {
 }
 
 export const logger = winston.createLogger({
-  level: config.env === 'development' || config.env === 'test' ? 'debug' : 'info',
+  level:
+    config.env === 'development' || config.env === 'test' ? 'debug' : 'info',
   format: logFormat,
   transports,
   exitOnError: false,
