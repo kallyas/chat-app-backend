@@ -58,9 +58,7 @@ describe('Auth Integration Tests', () => {
 
     it('should return 400 for duplicate email', async () => {
       // Register first user
-      await request(app)
-        .post('/api/auth/register')
-        .send(validUserData);
+      await request(app).post('/api/auth/register').send(validUserData);
 
       // Try to register with same email
       const response = await request(app)
@@ -82,11 +80,9 @@ describe('Auth Integration Tests', () => {
     beforeEach(async () => {
       // Generate unique user data for each test
       loginUserData = generateUniqueUserData('login');
-      
+
       // Register a user for login tests
-      await request(app)
-        .post('/api/auth/register')
-        .send(loginUserData);
+      await request(app).post('/api/auth/register').send(loginUserData);
     });
 
     it('should login user with correct credentials', async () => {
@@ -150,7 +146,7 @@ describe('Auth Integration Tests', () => {
 
     beforeEach(async () => {
       uniqueUserData = generateUniqueUserData('me-get');
-      
+
       const registerResponse = await request(app)
         .post('/api/auth/register')
         .send(uniqueUserData);
@@ -170,9 +166,7 @@ describe('Auth Integration Tests', () => {
     });
 
     it('should return 401 without token', async () => {
-      const response = await request(app)
-        .get('/api/auth/me')
-        .expect(401);
+      const response = await request(app).get('/api/auth/me').expect(401);
 
       expect(response.body.success).toBe(false);
       expect(response.body.message).toContain('Access token required');
@@ -195,7 +189,7 @@ describe('Auth Integration Tests', () => {
 
     beforeEach(async () => {
       logoutUserData = generateUniqueUserData('logout');
-      
+
       const registerResponse = await request(app)
         .post('/api/auth/register')
         .send(logoutUserData);
@@ -218,9 +212,7 @@ describe('Auth Integration Tests', () => {
     });
 
     it('should return 401 without token', async () => {
-      const response = await request(app)
-        .post('/api/auth/logout')
-        .expect(401);
+      const response = await request(app).post('/api/auth/logout').expect(401);
 
       expect(response.body.success).toBe(false);
     });
@@ -231,7 +223,7 @@ describe('Auth Integration Tests', () => {
 
     beforeEach(async () => {
       const uniqueUserData = generateUniqueUserData('me');
-      
+
       const registerResponse = await request(app)
         .post('/api/auth/register')
         .send(uniqueUserData);
