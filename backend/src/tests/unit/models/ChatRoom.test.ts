@@ -155,7 +155,6 @@ describe('ChatRoom Model', () => {
       expect(chatRoom.participants).toHaveLength(3);
       expect(chatRoom.participants).not.toContainEqual(user4._id);
     });
-
   });
 
   describe('updateLastMessage', () => {
