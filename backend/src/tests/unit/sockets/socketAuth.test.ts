@@ -47,10 +47,7 @@ describe('Socket Authentication', () => {
 
     mockSocket.handshake!.auth = { token };
 
-    await authenticateSocket(
-      mockSocket as AuthenticatedSocket,
-      mockNext
-    );
+    await authenticateSocket(mockSocket as AuthenticatedSocket, mockNext);
 
     expect(mockNext).toHaveBeenCalledWith();
     expect(mockSocket.userId).toBe(testUser._id.toString());
@@ -75,20 +72,14 @@ describe('Socket Authentication', () => {
 
     mockSocket.handshake!.headers = { authorization: `Bearer ${token}` };
 
-    await authenticateSocket(
-      mockSocket as AuthenticatedSocket,
-      mockNext
-    );
+    await authenticateSocket(mockSocket as AuthenticatedSocket, mockNext);
 
     expect(mockNext).toHaveBeenCalledWith();
     expect(mockSocket.userId).toBe(testUser._id.toString());
   });
 
   it('should reject connection without token', async () => {
-    await authenticateSocket(
-      mockSocket as AuthenticatedSocket,
-      mockNext
-    );
+    await authenticateSocket(mockSocket as AuthenticatedSocket, mockNext);
 
     expect(mockNext).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -100,10 +91,7 @@ describe('Socket Authentication', () => {
   it('should reject connection with invalid token', async () => {
     mockSocket.handshake!.auth = { token: 'invalid-token' };
 
-    await authenticateSocket(
-      mockSocket as AuthenticatedSocket,
-      mockNext
-    );
+    await authenticateSocket(mockSocket as AuthenticatedSocket, mockNext);
 
     expect(mockNext).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -128,10 +116,7 @@ describe('Socket Authentication', () => {
     // Wait for token to expire
     await new Promise(resolve => setTimeout(resolve, 100));
 
-    await authenticateSocket(
-      mockSocket as AuthenticatedSocket,
-      mockNext
-    );
+    await authenticateSocket(mockSocket as AuthenticatedSocket, mockNext);
 
     expect(mockNext).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -149,10 +134,7 @@ describe('Socket Authentication', () => {
 
     mockSocket.handshake!.auth = { token };
 
-    await authenticateSocket(
-      mockSocket as AuthenticatedSocket,
-      mockNext
-    );
+    await authenticateSocket(mockSocket as AuthenticatedSocket, mockNext);
 
     expect(mockNext).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -178,10 +160,7 @@ describe('Socket Authentication', () => {
 
     mockSocket.handshake!.auth = { token };
 
-    await authenticateSocket(
-      mockSocket as AuthenticatedSocket,
-      mockNext
-    );
+    await authenticateSocket(mockSocket as AuthenticatedSocket, mockNext);
 
     expect(mockNext).toHaveBeenCalledWith(
       expect.objectContaining({
