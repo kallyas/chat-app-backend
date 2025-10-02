@@ -33,7 +33,11 @@ describe('SocketRateLimiter', () => {
       };
 
       for (let i = 0; i < 5; i++) {
-        const allowed = rateLimiter.check(mockSocket as Socket, 'test-event', config);
+        const allowed = rateLimiter.check(
+          mockSocket as Socket,
+          'test-event',
+          config
+        );
         expect(allowed).toBe(true);
       }
     });
@@ -50,7 +54,11 @@ describe('SocketRateLimiter', () => {
       }
 
       // 4th request should be blocked
-      const allowed = rateLimiter.check(mockSocket as Socket, 'test-event', config);
+      const allowed = rateLimiter.check(
+        mockSocket as Socket,
+        'test-event',
+        config
+      );
       expect(allowed).toBe(false);
     });
 
@@ -65,13 +73,19 @@ describe('SocketRateLimiter', () => {
       rateLimiter.check(mockSocket as Socket, 'test-event', config);
 
       // Should be blocked
-      expect(rateLimiter.check(mockSocket as Socket, 'test-event', config)).toBe(false);
+      expect(
+        rateLimiter.check(mockSocket as Socket, 'test-event', config)
+      ).toBe(false);
 
       // Wait for window to expire
       return new Promise(resolve => {
         setTimeout(() => {
           // Should be allowed again after window reset
-          const allowed = rateLimiter.check(mockSocket as Socket, 'test-event', config);
+          const allowed = rateLimiter.check(
+            mockSocket as Socket,
+            'test-event',
+            config
+          );
           expect(allowed).toBe(true);
           resolve(undefined);
         }, 150);
@@ -107,10 +121,14 @@ describe('SocketRateLimiter', () => {
       rateLimiter.check(mockSocket as Socket, 'event1', config);
 
       // event1 should be blocked
-      expect(rateLimiter.check(mockSocket as Socket, 'event1', config)).toBe(false);
+      expect(rateLimiter.check(mockSocket as Socket, 'event1', config)).toBe(
+        false
+      );
 
       // event2 should still be allowed
-      expect(rateLimiter.check(mockSocket as Socket, 'event2', config)).toBe(true);
+      expect(rateLimiter.check(mockSocket as Socket, 'event2', config)).toBe(
+        true
+      );
     });
   });
 
@@ -153,10 +171,14 @@ describe('SocketRateLimiter', () => {
       rateLimiter.checkUser('user-123', 'test-event', config);
 
       // user-123 should be blocked
-      expect(rateLimiter.checkUser('user-123', 'test-event', config)).toBe(false);
+      expect(rateLimiter.checkUser('user-123', 'test-event', config)).toBe(
+        false
+      );
 
       // user-456 should still be allowed
-      expect(rateLimiter.checkUser('user-456', 'test-event', config)).toBe(true);
+      expect(rateLimiter.checkUser('user-456', 'test-event', config)).toBe(
+        true
+      );
     });
   });
 
@@ -175,7 +197,11 @@ describe('SocketRateLimiter', () => {
     });
 
     it('should return max requests when no limit exists', () => {
-      const remaining = rateLimiter.getRemaining('socket-123', 'test-event', 10);
+      const remaining = rateLimiter.getRemaining(
+        'socket-123',
+        'test-event',
+        10
+      );
       expect(remaining).toBe(10);
     });
 
@@ -244,7 +270,9 @@ describe('SocketRateLimiter', () => {
       rateLimiter.destroy();
 
       // After destroy, new checks should work with fresh state
-      expect(rateLimiter.check(mockSocket as Socket, 'test-event', config)).toBe(true);
+      expect(
+        rateLimiter.check(mockSocket as Socket, 'test-event', config)
+      ).toBe(true);
     });
   });
 });
