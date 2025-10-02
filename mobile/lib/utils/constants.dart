@@ -152,7 +152,8 @@ class AppConstants {
   static const String notificationIconPath = 'assets/icons/notification_icon.png';
 
   // Regular expressions
-  static final RegExp emailRegex = RegExp(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$');
+  // Updated to match backend: allows modern TLDs and plus-addressing (user+tag@domain.com)
+  static final RegExp emailRegex = RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]+$');
   static final RegExp usernameRegex = RegExp(r'^[a-zA-Z0-9_-]{3,30}$');
   static final RegExp phoneRegex = RegExp(r'^\+?[1-9]\d{1,14}$');
   static final RegExp urlRegex = RegExp(r'https?://(?:[-\w.])+(?:\:[0-9]+)?(?:/(?:[\w/_.])*(?:\?(?:[\w&=%.])*)?(?:\#(?:[\w.])*)?)?');
