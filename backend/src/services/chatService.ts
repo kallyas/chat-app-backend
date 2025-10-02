@@ -1,19 +1,35 @@
 import mongoose from 'mongoose';
-import { ChatRoom, IChatRoom, ChatRoomType, Message, IMessage, MessageType, User, IUser } from '@/models';
+import {
+  ChatRoom,
+  IChatRoom,
+  ChatRoomType,
+  Message,
+  IMessage,
+  MessageType,
+  User,
+  IUser,
+} from '@/models';
 import { AppError } from '@/middleware';
-import { toObjectId, getPaginationInfo, validatePagination, calculateSkip } from '@/utils';
+import {
+  toObjectId,
+  getPaginationInfo,
+  validatePagination,
+  calculateSkip,
+} from '@/utils';
 import { logger } from '@/config/logger';
 import { config } from '@/config/environment';
 import { CreateChatRoomData, SendMessageData, GetMessagesQuery } from '@/types';
 
 export class ChatService {
-  static async createChatRoom(roomData: CreateChatRoomData): Promise<IChatRoom> {
+  static async createChatRoom(
+    roomData: CreateChatRoomData
+  ): Promise<IChatRoom> {
     try {
       const { name, type, participants, description, createdBy } = roomData;
 
       // Validate participants exist
       const validParticipants = await User.find({
-        _id: { $in: participants }
+        _id: { $in: participants },
       }).select('_id');
 
       if (validParticipants.length !== participants.length) {
@@ -28,17 +44,20 @@ export class ChatService {
       // For private chats, check if room already exists
       if (type === ChatRoomType.PRIVATE) {
         if (participants.length !== 2) {
-          throw new AppError('Private chat must have exactly 2 participants', 400);
+          throw new AppError(
+            'Private chat must have exactly 2 participants',
+            400
+          );
         }
 
         // Sort participants to ensure consistent ordering for index optimization
-        const sortedParticipants = participants.map(p => toObjectId(p)).sort((a, b) =>
-          a.toString().localeCompare(b.toString())
-        );
+        const sortedParticipants = participants
+          .map(p => toObjectId(p))
+          .sort((a, b) => a.toString().localeCompare(b.toString()));
 
         const existingRoom = await ChatRoom.findOne({
           type: ChatRoomType.PRIVATE,
-          participants: sortedParticipants
+          participants: sortedParticipants,
         });
 
         if (existingRoom) {
@@ -55,7 +74,10 @@ export class ChatService {
         });
 
         await chatRoom.save();
-        await chatRoom.populate('participants', 'username email profilePic isOnline');
+        await chatRoom.populate(
+          'participants',
+          'username email profilePic isOnline'
+        );
         await chatRoom.populate('createdBy', 'username email profilePic');
 
         logger.info(`New private chat room created: ${chatRoom._id}`);
@@ -72,7 +94,10 @@ export class ChatService {
       });
 
       await chatRoom.save();
-      await chatRoom.populate('participants', 'username email profilePic isOnline');
+      await chatRoom.populate(
+        'participants',
+        'username email profilePic isOnline'
+      );
       await chatRoom.populate('createdBy', 'username email profilePic');
 
       logger.info(`Chat room created: ${chatRoom._id} by ${createdBy}`);
@@ -91,10 +116,19 @@ export class ChatService {
     userId: string,
     page: any = 1,
     limit: any = 20
-  ): Promise<{ chatRooms: any[], total: number, totalPages: number, hasNext: boolean, hasPrev: boolean }> {
+  ): Promise<{
+    chatRooms: any[];
+    total: number;
+    totalPages: number;
+    hasNext: boolean;
+    hasPrev: boolean;
+  }> {
     try {
       // Validate pagination parameters
-      const { page: validPage, limit: validLimit } = validatePagination(page, limit);
+      const { page: validPage, limit: validLimit } = validatePagination(
+        page,
+        limit
+      );
       const skip = calculateSkip(validPage, validLimit);
       const userObjectId = toObjectId(userId);
 
@@ -105,7 +139,7 @@ export class ChatService {
           $match: {
             participants: userObjectId,
             isActive: true,
-          }
+          },
         },
         // Get total count
         {
@@ -122,8 +156,8 @@ export class ChatService {
                   from: 'users',
                   localField: 'participants',
                   foreignField: '_id',
-                  as: 'participantDetails'
-                }
+                  as: 'participantDetails',
+                },
               },
               // Lookup createdBy
               {
@@ -131,8 +165,8 @@ export class ChatService {
                   from: 'users',
                   localField: 'createdBy',
                   foreignField: '_id',
-                  as: 'createdByDetails'
-                }
+                  as: 'createdByDetails',
+                },
               },
               // Lookup lastMessage sender
               {
@@ -140,8 +174,8 @@ export class ChatService {
                   from: 'users',
                   localField: 'lastMessage.sender',
                   foreignField: '_id',
-                  as: 'lastMessageSenderDetails'
-                }
+                  as: 'lastMessageSenderDetails',
+                },
               },
               // Project only needed fields
               {
@@ -161,20 +195,22 @@ export class ChatService {
                         email: '$$p.email',
                         profilePic: '$$p.profilePic',
                         isOnline: '$$p.isOnline',
-                        lastSeen: '$$p.lastSeen'
-                      }
-                    }
+                        lastSeen: '$$p.lastSeen',
+                      },
+                    },
                   },
                   createdBy: {
                     $let: {
-                      vars: { creator: { $arrayElemAt: ['$createdByDetails', 0] } },
+                      vars: {
+                        creator: { $arrayElemAt: ['$createdByDetails', 0] },
+                      },
                       in: {
                         _id: '$$creator._id',
                         username: '$$creator.username',
                         email: '$$creator.email',
-                        profilePic: '$$creator.profilePic'
-                      }
-                    }
+                        profilePic: '$$creator.profilePic',
+                      },
+                    },
                   },
                   lastMessage: {
                     $cond: {
@@ -184,23 +220,27 @@ export class ChatService {
                         timestamp: '$lastMessage.timestamp',
                         sender: {
                           $let: {
-                            vars: { senderData: { $arrayElemAt: ['$lastMessageSenderDetails', 0] } },
+                            vars: {
+                              senderData: {
+                                $arrayElemAt: ['$lastMessageSenderDetails', 0],
+                              },
+                            },
                             in: {
                               _id: '$$senderData._id',
                               username: '$$senderData.username',
-                              profilePic: '$$senderData.profilePic'
-                            }
-                          }
-                        }
+                              profilePic: '$$senderData.profilePic',
+                            },
+                          },
+                        },
                       },
-                      else: null
-                    }
-                  }
-                }
-              }
-            ]
-          }
-        }
+                      else: null,
+                    },
+                  },
+                },
+              },
+            ],
+          },
+        },
       ]);
 
       const total = chatRoomsResult.metadata[0]?.total || 0;
@@ -214,7 +254,7 @@ export class ChatService {
         total,
         totalPages,
         hasNext,
-        hasPrev
+        hasPrev,
       };
     } catch (error) {
       logger.error('Error in getUserChatRooms:', error);
@@ -222,7 +262,10 @@ export class ChatService {
     }
   }
 
-  static async getChatRoomById(roomId: string, userId: string): Promise<IChatRoom> {
+  static async getChatRoomById(
+    roomId: string,
+    userId: string
+  ): Promise<IChatRoom> {
     try {
       const chatRoom = await ChatRoom.findOne({
         _id: toObjectId(roomId),
@@ -248,7 +291,14 @@ export class ChatService {
 
   static async sendMessage(messageData: SendMessageData): Promise<IMessage> {
     try {
-      const { chatRoomId, senderId, content, type = MessageType.TEXT, replyTo, metadata } = messageData;
+      const {
+        chatRoomId,
+        senderId,
+        content,
+        type = MessageType.TEXT,
+        replyTo,
+        metadata,
+      } = messageData;
 
       // Verify user is participant in the chat room
       const chatRoom = await ChatRoom.findOne({
@@ -290,7 +340,11 @@ export class ChatService {
       // Populate message data
       await message.populate([
         { path: 'senderId', select: 'username profilePic' },
-        { path: 'replyTo', select: 'content senderId type createdAt', populate: { path: 'senderId', select: 'username' } }
+        {
+          path: 'replyTo',
+          select: 'content senderId type createdAt',
+          populate: { path: 'senderId', select: 'username' },
+        },
       ]);
 
       logger.info(`Message sent: ${message._id} in room ${chatRoomId}`);
@@ -305,7 +359,11 @@ export class ChatService {
     }
   }
 
-  static async getMessages(chatRoomId: string, userId: string, query: GetMessagesQuery = {}): Promise<{
+  static async getMessages(
+    chatRoomId: string,
+    userId: string,
+    query: GetMessagesQuery = {}
+  ): Promise<{
     messages: IMessage[];
     pagination: Record<string, any>;
   }> {
@@ -313,7 +371,10 @@ export class ChatService {
       const { before } = query;
 
       // Validate pagination parameters
-      const { page: validPage, limit: validLimit } = validatePagination(query.page, query.limit);
+      const { page: validPage, limit: validLimit } = validatePagination(
+        query.page,
+        query.limit
+      );
 
       // Verify user has access to chat room
       const chatRoom = await ChatRoom.findOne({
@@ -326,7 +387,9 @@ export class ChatService {
         throw new AppError('Chat room not found or access denied', 404);
       }
 
-      const filter: Record<string, any> = { chatRoomId: toObjectId(chatRoomId) };
+      const filter: Record<string, any> = {
+        chatRoomId: toObjectId(chatRoomId),
+      };
 
       if (before) {
         const beforeMessage = await Message.findById(before);
@@ -342,13 +405,17 @@ export class ChatService {
         .populate({
           path: 'replyTo',
           select: 'content senderId type createdAt',
-          populate: { path: 'senderId', select: 'username' }
+          populate: { path: 'senderId', select: 'username' },
         })
         .sort({ createdAt: -1 })
         .limit(validLimit)
         .skip(calculateSkip(validPage, validLimit));
 
-      const pagination = getPaginationInfo(validPage, validLimit, totalMessages);
+      const pagination = getPaginationInfo(
+        validPage,
+        validLimit,
+        totalMessages
+      );
 
       return { messages: messages.reverse(), pagination };
     } catch (error) {
@@ -360,27 +427,44 @@ export class ChatService {
     }
   }
 
-  static async markMessagesAsRead(chatRoomId: string, userId: string): Promise<void> {
+  static async markMessagesAsRead(
+    chatRoomId: string,
+    userId: string
+  ): Promise<void> {
     try {
-      await Message.markRoomMessagesAsRead(toObjectId(chatRoomId), toObjectId(userId));
+      await Message.markRoomMessagesAsRead(
+        toObjectId(chatRoomId),
+        toObjectId(userId)
+      );
 
-      logger.info(`Messages marked as read in room ${chatRoomId} by user ${userId}`);
+      logger.info(
+        `Messages marked as read in room ${chatRoomId} by user ${userId}`
+      );
     } catch (error) {
       logger.error('Error in markMessagesAsRead:', error);
       throw new AppError('Failed to mark messages as read', 500);
     }
   }
 
-  static async getUnreadMessageCount(chatRoomId: string, userId: string): Promise<number> {
+  static async getUnreadMessageCount(
+    chatRoomId: string,
+    userId: string
+  ): Promise<number> {
     try {
-      return await Message.getUnreadCount(toObjectId(chatRoomId), toObjectId(userId));
+      return await Message.getUnreadCount(
+        toObjectId(chatRoomId),
+        toObjectId(userId)
+      );
     } catch (error) {
       logger.error('Error in getUnreadMessageCount:', error);
       throw new AppError('Failed to get unread message count', 500);
     }
   }
 
-  static async joinChatRoom(roomId: string, userId: string): Promise<IChatRoom> {
+  static async joinChatRoom(
+    roomId: string,
+    userId: string
+  ): Promise<IChatRoom> {
     try {
       const chatRoom = await ChatRoom.findById(roomId);
 
@@ -401,7 +485,10 @@ export class ChatService {
       }
 
       await chatRoom.addParticipant(toObjectId(userId));
-      await chatRoom.populate('participants', 'username email profilePic isOnline');
+      await chatRoom.populate(
+        'participants',
+        'username email profilePic isOnline'
+      );
 
       logger.info(`User ${userId} joined chat room ${roomId}`);
 
@@ -439,7 +526,11 @@ export class ChatService {
     }
   }
 
-  static async updateChatRoom(roomId: string, userId: string, updateData: Partial<IChatRoom>): Promise<IChatRoom> {
+  static async updateChatRoom(
+    roomId: string,
+    userId: string,
+    updateData: Partial<IChatRoom>
+  ): Promise<IChatRoom> {
     try {
       const chatRoom = await ChatRoom.findOne({
         _id: toObjectId(roomId),
@@ -467,11 +558,10 @@ export class ChatService {
         }
       }
 
-      const updatedRoom = await ChatRoom.findByIdAndUpdate(
-        roomId,
-        updates,
-        { new: true, runValidators: true }
-      ).populate('participants', 'username email profilePic isOnline');
+      const updatedRoom = await ChatRoom.findByIdAndUpdate(roomId, updates, {
+        new: true,
+        runValidators: true,
+      }).populate('participants', 'username email profilePic isOnline');
 
       logger.info(`Chat room updated: ${roomId} by ${userId}`);
 
@@ -510,7 +600,11 @@ export class ChatService {
     }
   }
 
-  static async editMessage(messageId: string, userId: string, newContent: string): Promise<IMessage> {
+  static async editMessage(
+    messageId: string,
+    userId: string,
+    newContent: string
+  ): Promise<IMessage> {
     try {
       const message = await Message.findOne({
         _id: toObjectId(messageId),
