@@ -41,7 +41,7 @@ export const setupSocketIO = (httpServer: HttpServer): Server => {
   });
 
   // Handle server errors
-  io.on('error', (error) => {
+  io.on('error', error => {
     logger.error('Socket.IO server error:', error);
   });
 
