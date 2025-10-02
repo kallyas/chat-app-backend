@@ -35,7 +35,10 @@ export const authenticateToken = async (
     }
 
     // Validate token version to detect invalidated tokens
-    if (decoded.tokenVersion !== undefined && decoded.tokenVersion !== user.tokenVersion) {
+    if (
+      decoded.tokenVersion !== undefined &&
+      decoded.tokenVersion !== user.tokenVersion
+    ) {
       res.status(401).json({
         success: false,
         message: 'Token has been invalidated. Please login again.',
@@ -86,7 +89,7 @@ export const optionalAuth = async (
 
     const decoded = jwt.verify(token, config.jwt.secret) as JWTPayload;
     const user = await User.findById(decoded.id).select('-password');
-    
+
     if (user) {
       req.user = user;
     }
