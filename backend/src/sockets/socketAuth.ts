@@ -10,9 +10,13 @@ export interface AuthenticatedSocket extends Socket {
   username?: string;
 }
 
-export const authenticateSocket = async (socket: AuthenticatedSocket, next: (err?: Error) => void) => {
+export const authenticateSocket = async (
+  socket: AuthenticatedSocket,
+  next: (err?: Error) => void
+) => {
   try {
-    const token = socket.handshake.auth.token || socket.handshake.headers.authorization;
+    const token =
+      socket.handshake.auth.token || socket.handshake.headers.authorization;
 
     if (!token) {
       return next(new Error('Authentication token required'));
@@ -24,13 +28,16 @@ export const authenticateSocket = async (socket: AuthenticatedSocket, next: (err
     const decoded = jwt.verify(cleanToken, config.jwt.secret) as JWTPayload;
 
     const user = await User.findById(decoded.id).select('-password');
-    
+
     if (!user) {
       return next(new Error('Invalid token - user not found'));
     }
 
     // Validate token version
-    if (decoded.tokenVersion !== undefined && decoded.tokenVersion !== user.tokenVersion) {
+    if (
+      decoded.tokenVersion !== undefined &&
+      decoded.tokenVersion !== user.tokenVersion
+    ) {
       return next(new Error('Token has been invalidated. Please login again.'));
     }
 
@@ -50,7 +57,7 @@ export const authenticateSocket = async (socket: AuthenticatedSocket, next: (err
     next();
   } catch (error) {
     logger.error('Socket authentication error:', error);
-    
+
     if (error instanceof jwt.TokenExpiredError) {
       return next(new Error('Token expired'));
     }
