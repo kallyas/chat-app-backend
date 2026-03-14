@@ -29,9 +29,19 @@ if (error) {
   throw new Error(`Config validation error: ${error.message}`);
 }
 
+if (
+  envVars.NODE_ENV === 'production' &&
+  String(envVars.JWT_SECRET).length < 32
+) {
+  throw new Error(
+    'Config validation error: JWT_SECRET must be at least 32 characters in production'
+  );
+}
+
 export const config = {
   env: envVars.NODE_ENV as string,
   port: envVars.PORT as number,
+  isProduction: envVars.NODE_ENV === 'production',
   mongoose: {
     url: envVars.MONGODB_URI as string,
   },
@@ -55,5 +65,8 @@ export const config = {
       (envVars.MESSAGE_DELETE_TIME_LIMIT_HOURS as number) * 60 * 60 * 1000,
     editTimeLimitHours: envVars.MESSAGE_EDIT_TIME_LIMIT_HOURS as number,
     deleteTimeLimitHours: envVars.MESSAGE_DELETE_TIME_LIMIT_HOURS as number,
+  },
+  server: {
+    shutdownTimeoutMs: 30000,
   },
 };

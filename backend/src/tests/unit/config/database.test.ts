@@ -12,6 +12,8 @@ jest.mock('@/config/logger', () => ({
 describe('Database', () => {
   afterEach(() => {
     jest.clearAllMocks();
+    jest.restoreAllMocks();
+    (mongoose.connection as unknown as { _readyState: number })._readyState = 1;
   });
 
   describe('getInstance', () => {
@@ -26,11 +28,13 @@ describe('Database', () => {
     it('should connect successfully with provided URI', async () => {
       const mockConnect = jest
         .spyOn(mongoose, 'connect')
-        .mockResolvedValue(mongoose as any);
+        .mockResolvedValue(mongoose);
 
       await database.connect();
 
-      expect(mockConnect).toHaveBeenCalledWith(process.env.MONGODB_URI);
+      expect(mockConnect).toHaveBeenCalledWith(
+        expect.stringContaining('mongodb://')
+      );
       mockConnect.mockRestore();
     });
   });
@@ -45,6 +49,22 @@ describe('Database', () => {
 
       expect(mockDisconnect).toHaveBeenCalled();
       mockDisconnect.mockRestore();
+    });
+  });
+
+  describe('health state', () => {
+    it('should report healthy when mongoose is connected', () => {
+      (mongoose.connection as unknown as { _readyState: number })._readyState = 1;
+
+      expect(database.isHealthy()).toBe(true);
+      expect(database.getStatus()).toBe('connected');
+    });
+
+    it('should report non-healthy state when mongoose is disconnected', () => {
+      (mongoose.connection as unknown as { _readyState: number })._readyState = 0;
+
+      expect(database.isHealthy()).toBe(false);
+      expect(database.getStatus()).toBe('disconnected');
     });
   });
 });

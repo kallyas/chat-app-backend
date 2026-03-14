@@ -1,5 +1,4 @@
 import { Request, Response, NextFunction } from 'express';
-import mongoose from 'mongoose';
 import {
   AppError,
   createError,
@@ -7,6 +6,7 @@ import {
   catchAsync,
   notFound,
 } from '@/middleware/errorHandler';
+import { AuthRequest } from '@/types';
 
 jest.mock('@/config/logger', () => ({
   logger: {
@@ -15,9 +15,21 @@ jest.mock('@/config/logger', () => ({
 }));
 
 describe('Error Handler Middleware', () => {
-  let mockRequest: Partial<Request>;
+  let mockRequest: Partial<AuthRequest>;
   let mockResponse: Partial<Response>;
   let nextFunction: NextFunction;
+
+  const getJsonPayload = <T,>() => {
+    const mockJson = mockResponse.json as jest.Mock;
+    const calls = mockJson.mock.calls as unknown[][];
+    return calls[0][0] as T;
+  };
+
+  const getNextError = () => {
+    const mockNext = nextFunction as jest.Mock;
+    const calls = mockNext.mock.calls as unknown[][];
+    return calls[0][0] as AppError;
+  };
 
   beforeEach(() => {
     mockRequest = {
@@ -25,6 +37,7 @@ describe('Error Handler Middleware', () => {
       method: 'GET',
       ip: '127.0.0.1',
       originalUrl: '/api/test',
+      requestId: 'req-test-id',
     };
 
     mockResponse = {
@@ -71,6 +84,7 @@ describe('Error Handler Middleware', () => {
       expect(mockResponse.status).toHaveBeenCalledWith(400);
       expect(mockResponse.json).toHaveBeenCalledWith({
         success: false,
+        requestId: 'req-test-id',
         error,
         message: 'Test error',
         stack: error.stack,
@@ -91,6 +105,7 @@ describe('Error Handler Middleware', () => {
       expect(mockResponse.status).toHaveBeenCalledWith(400);
       expect(mockResponse.json).toHaveBeenCalledWith({
         success: false,
+        requestId: 'req-test-id',
         message: 'Test error',
       });
     });
@@ -109,13 +124,14 @@ describe('Error Handler Middleware', () => {
       expect(mockResponse.status).toHaveBeenCalledWith(500);
       expect(mockResponse.json).toHaveBeenCalledWith({
         success: false,
+        requestId: 'req-test-id',
         message: 'Something went wrong!',
       });
     });
 
     it('should handle CastError from MongoDB', () => {
       process.env.NODE_ENV = 'production';
-      const error: any = {
+      const error = {
         name: 'CastError',
         path: '_id',
         value: 'invalid-id',
@@ -130,17 +146,17 @@ describe('Error Handler Middleware', () => {
       );
 
       expect(mockResponse.status).toHaveBeenCalledWith(400);
-      expect(mockResponse.json).toHaveBeenCalledWith(
-        expect.objectContaining({
-          success: false,
-          message: expect.stringContaining('Invalid'),
-        })
-      );
+      const payload = getJsonPayload<{
+        success: boolean;
+        message: string;
+      }>();
+      expect(payload.success).toBe(false);
+      expect(payload.message).toContain('Invalid');
     });
 
     it('should handle duplicate key errors', () => {
       process.env.NODE_ENV = 'production';
-      const error: any = {
+      const error = {
         code: 11000,
         keyValue: { email: 'test@example.com' },
         message: 'Duplicate key error',
@@ -154,17 +170,17 @@ describe('Error Handler Middleware', () => {
       );
 
       expect(mockResponse.status).toHaveBeenCalledWith(400);
-      expect(mockResponse.json).toHaveBeenCalledWith(
-        expect.objectContaining({
-          success: false,
-          message: expect.stringContaining('Duplicate'),
-        })
-      );
+      const payload = getJsonPayload<{
+        success: boolean;
+        message: string;
+      }>();
+      expect(payload.success).toBe(false);
+      expect(payload.message).toContain('Duplicate');
     });
 
     it('should handle JWT errors', () => {
       process.env.NODE_ENV = 'production';
-      const error: any = {
+      const error = {
         name: 'JsonWebTokenError',
         message: 'Invalid token',
       };
@@ -177,17 +193,17 @@ describe('Error Handler Middleware', () => {
       );
 
       expect(mockResponse.status).toHaveBeenCalledWith(401);
-      expect(mockResponse.json).toHaveBeenCalledWith(
-        expect.objectContaining({
-          success: false,
-          message: expect.stringContaining('Invalid token'),
-        })
-      );
+      const payload = getJsonPayload<{
+        success: boolean;
+        message: string;
+      }>();
+      expect(payload.success).toBe(false);
+      expect(payload.message).toContain('Invalid token');
     });
 
     it('should handle token expired errors', () => {
       process.env.NODE_ENV = 'production';
-      const error: any = {
+      const error = {
         name: 'TokenExpiredError',
         message: 'Token expired',
       };
@@ -205,33 +221,28 @@ describe('Error Handler Middleware', () => {
 
   describe('catchAsync', () => {
     it('should call next with error if async function throws', async () => {
-      const asyncFn = async () => {
-        throw new Error('Async error');
-      };
+      const asyncFn = () => Promise.reject(new Error('Async error'));
 
       const wrappedFn = catchAsync(asyncFn);
 
-      await wrappedFn(
-        mockRequest as Request,
-        mockResponse as Response,
-        nextFunction
-      );
+      wrappedFn(mockRequest as Request, mockResponse as Response, nextFunction);
+
+      await new Promise(resolve => setImmediate(resolve));
 
       expect(nextFunction).toHaveBeenCalledWith(expect.any(Error));
     });
 
     it('should execute async function successfully', async () => {
-      const asyncFn = async (req: Request, res: Response) => {
+      const asyncFn = (req: Request, res: Response) => {
         res.status(200).json({ success: true });
+        return Promise.resolve();
       };
 
       const wrappedFn = catchAsync(asyncFn);
 
-      await wrappedFn(
-        mockRequest as Request,
-        mockResponse as Response,
-        nextFunction
-      );
+      wrappedFn(mockRequest as Request, mockResponse as Response, nextFunction);
+
+      await new Promise(resolve => setImmediate(resolve));
 
       expect(mockResponse.status).toHaveBeenCalledWith(200);
       expect(mockResponse.json).toHaveBeenCalledWith({ success: true });
@@ -242,12 +253,9 @@ describe('Error Handler Middleware', () => {
     it('should create 404 error and call next', () => {
       notFound(mockRequest as Request, mockResponse as Response, nextFunction);
 
-      expect(nextFunction).toHaveBeenCalledWith(
-        expect.objectContaining({
-          statusCode: 404,
-          message: expect.stringContaining('/api/test'),
-        })
-      );
+      const error = getNextError();
+      expect(error.statusCode).toBe(404);
+      expect(error.message).toContain('/api/test');
     });
   });
 });

@@ -1,5 +1,22 @@
 import { Request, Response, NextFunction } from 'express';
 import { logHttpRequest } from '@/utils/logUtils';
+import { randomUUID } from 'crypto';
+import { AuthRequest } from '@/types';
+
+const REQUEST_ID_HEADER = 'x-request-id';
+
+const sanitizeRequestId = (value?: string | string[]): string | null => {
+  if (typeof value !== 'string') {
+    return null;
+  }
+
+  const trimmed = value.trim();
+  if (!trimmed || trimmed.length > 128) {
+    return null;
+  }
+
+  return /^[a-zA-Z0-9-_.]+$/.test(trimmed) ? trimmed : null;
+};
 
 /**
  * Middleware to log HTTP requests with response time
@@ -10,19 +27,25 @@ export const requestLogger = (
   next: NextFunction
 ): void => {
   const startTime = Date.now();
+  let logged = false;
 
-  // Log request start
-  const originalSend = res.send;
+  const logRequest = (completed: boolean) => {
+    if (logged) {
+      return;
+    }
 
-  res.send = function (data) {
+    logged = true;
     const responseTime = Date.now() - startTime;
-
-    // Log the completed request
-    logHttpRequest(req, res, responseTime);
-
-    // Call original send method
-    return originalSend.call(this, data);
+    logHttpRequest(req as AuthRequest, res, responseTime, completed);
   };
+
+  res.on('finish', () => {
+    logRequest(true);
+  });
+
+  res.on('close', () => {
+    logRequest(res.writableEnded);
+  });
 
   next();
 };
@@ -35,12 +58,11 @@ export const addRequestId = (
   res: Response,
   next: NextFunction
 ): void => {
-  const requestId = `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  const requestId =
+    sanitizeRequestId(req.headers[REQUEST_ID_HEADER]) ?? randomUUID();
 
-  // Add request ID to request object
-  (req as any).requestId = requestId;
+  (req as AuthRequest).requestId = requestId;
 
-  // Add request ID to response headers for debugging
   res.setHeader('X-Request-ID', requestId);
 
   next();

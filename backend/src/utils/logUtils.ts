@@ -1,15 +1,18 @@
 import { logger } from '@/config/logger';
-import { Request, Response } from 'express';
+import { Response } from 'express';
+import { AuthRequest } from '@/types';
 
 /**
  * Log HTTP requests with detailed information
  */
 export const logHttpRequest = (
-  req: Request,
+  req: AuthRequest,
   res: Response,
-  responseTime?: number
+  responseTime?: number,
+  completed = true
 ) => {
   const logData = {
+    requestId: req.requestId,
     method: req.method,
     url: req.originalUrl,
     ip: req.ip,
@@ -17,7 +20,8 @@ export const logHttpRequest = (
     statusCode: res.statusCode,
     responseTime: responseTime ? `${responseTime}ms` : undefined,
     contentLength: res.get('Content-Length'),
-    userId: (req as any).user?._id?.toString(),
+    userId: req.user?._id?.toString(),
+    completed,
   };
 
   // Log to access log

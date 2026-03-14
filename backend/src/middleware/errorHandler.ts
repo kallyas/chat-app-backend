@@ -1,6 +1,22 @@
 import { Request, Response, NextFunction } from 'express';
 import { logger } from '@/config/logger';
 import mongoose from 'mongoose';
+import { AuthRequest } from '@/types';
+
+type DuplicateKeyError = {
+  code: number;
+  keyValue: Record<string, unknown>;
+};
+
+type CastErrorLike = {
+  name: 'CastError';
+  path: string;
+  value: unknown;
+};
+
+type ErrorWithStatusCode = Error & {
+  statusCode?: number;
+};
 
 export class AppError extends Error {
   public statusCode: number;
@@ -19,14 +35,14 @@ export const createError = (message: string, statusCode: number) => {
   return new AppError(message, statusCode);
 };
 
-const handleCastErrorDB = (err: mongoose.Error.CastError) => {
+const handleCastErrorDB = (err: Pick<mongoose.Error.CastError, 'path' | 'value'>) => {
   const message = `Invalid ${err.path}: ${err.value}`;
   return new AppError(message, 400);
 };
 
-const handleDuplicateFieldsDB = (err: { keyValue: Record<string, any> }) => {
+const handleDuplicateFieldsDB = (err: DuplicateKeyError) => {
   const field = Object.keys(err.keyValue)[0];
-  const value = err.keyValue[field];
+  const value = String(err.keyValue[field]);
   const message = `Duplicate field value: ${value}. Please use another value for ${field}`;
   return new AppError(message, 400);
 };
@@ -43,19 +59,21 @@ const handleJWTError = () =>
 const handleJWTExpiredError = () =>
   new AppError('Your token has expired! Please log in again.', 401);
 
-const sendErrorDev = (err: AppError, res: Response) => {
+const sendErrorDev = (err: AppError, req: AuthRequest, res: Response) => {
   res.status(err.statusCode).json({
     success: false,
+    requestId: req.requestId,
     error: err,
     message: err.message,
     stack: err.stack,
   });
 };
 
-const sendErrorProd = (err: AppError, res: Response) => {
+const sendErrorProd = (err: AppError, req: AuthRequest, res: Response) => {
   if (err.isOperational) {
     res.status(err.statusCode).json({
       success: false,
+      requestId: req.requestId,
       message: err.message,
     });
   } else {
@@ -63,49 +81,70 @@ const sendErrorProd = (err: AppError, res: Response) => {
 
     res.status(500).json({
       success: false,
+      requestId: req.requestId,
       message: 'Something went wrong!',
     });
   }
 };
 
 export const globalErrorHandler = (
-  err: any,
+  err: unknown,
   req: Request,
   res: Response,
-  _next: NextFunction
+  next: NextFunction
 ): void => {
-  err.statusCode = err.statusCode || 500;
+  void next;
+
+  const request = req as AuthRequest;
+  const baseError =
+    err instanceof Error ? err : new Error('Unexpected non-error thrown');
+  const errorName = getErrorName(err);
+  const statusCode =
+    typeof (err as ErrorWithStatusCode | undefined)?.statusCode === 'number'
+      ? ((err as ErrorWithStatusCode).statusCode as number)
+      : 500;
+  const normalizedError =
+    err instanceof AppError ? err : new AppError(baseError.message, statusCode);
+
+  if (!(err instanceof AppError)) {
+    normalizedError.isOperational = false;
+  }
 
   logger.error('Global error handler:', {
-    message: err.message,
-    stack: err.stack,
+    message: baseError.message,
+    stack: baseError.stack,
     url: req.url,
     method: req.method,
     ip: req.ip,
+    requestId: request.requestId,
   });
 
   if (process.env.NODE_ENV === 'development') {
-    sendErrorDev(err, res);
+    sendErrorDev(normalizedError, request, res);
   } else {
-    let error = { ...err };
-    error.message = err.message;
+    let responseError = normalizedError;
 
-    if (error.name === 'CastError') error = handleCastErrorDB(error);
-    if (error.code === 11000) error = handleDuplicateFieldsDB(error);
-    if (error.name === 'ValidationError')
-      error = handleValidationErrorDB(error);
-    if (error.name === 'JsonWebTokenError') error = handleJWTError();
-    if (error.name === 'TokenExpiredError') error = handleJWTExpiredError();
+    if (err instanceof mongoose.Error.CastError || isCastErrorLike(err)) {
+      responseError = handleCastErrorDB(err);
+    } else if (isDuplicateKeyError(err)) {
+      responseError = handleDuplicateFieldsDB(err);
+    } else if (err instanceof mongoose.Error.ValidationError) {
+      responseError = handleValidationErrorDB(err);
+    } else if (errorName === 'JsonWebTokenError') {
+      responseError = handleJWTError();
+    } else if (errorName === 'TokenExpiredError') {
+      responseError = handleJWTExpiredError();
+    }
 
-    sendErrorProd(error, res);
+    sendErrorProd(responseError, request, res);
   }
 };
 
 export const catchAsync = (
-  fn: (req: Request, res: Response, next: NextFunction) => Promise<any>
+  fn: (req: Request, res: Response, next: NextFunction) => Promise<unknown>
 ) => {
   return (req: Request, res: Response, next: NextFunction) => {
-    fn(req, res, next).catch(next);
+    void fn(req, res, next).catch(next);
   };
 };
 
@@ -116,4 +155,39 @@ export const notFound = (
 ): void => {
   const error = new AppError(`Not found - ${req.originalUrl}`, 404);
   next(error);
+};
+
+const isDuplicateKeyError = (err: unknown): err is DuplicateKeyError => {
+  if (typeof err !== 'object' || err === null || !('code' in err)) {
+    return false;
+  }
+
+  const candidate = err as Partial<DuplicateKeyError>;
+  return candidate.code === 11000 && typeof candidate.keyValue === 'object';
+};
+
+const isCastErrorLike = (err: unknown): err is CastErrorLike => {
+  if (typeof err !== 'object' || err === null) {
+    return false;
+  }
+
+  const candidate = err as Partial<CastErrorLike>;
+  return (
+    candidate.name === 'CastError' &&
+    typeof candidate.path === 'string' &&
+    'value' in candidate
+  );
+};
+
+const getErrorName = (err: unknown): string | undefined => {
+  if (err instanceof Error) {
+    return err.name;
+  }
+
+  if (typeof err === 'object' && err !== null && 'name' in err) {
+    const candidate = err as { name?: unknown };
+    return typeof candidate.name === 'string' ? candidate.name : undefined;
+  }
+
+  return undefined;
 };

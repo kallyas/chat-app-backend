@@ -1,8 +1,17 @@
 import mongoose from 'mongoose';
 import { logger } from './logger';
+import { config } from './environment';
+
+const READY_STATE_MAP: Record<number, string> = {
+  0: 'disconnected',
+  1: 'connected',
+  2: 'connecting',
+  3: 'disconnecting',
+};
 
 class Database {
   private static instance: Database;
+  private listenersRegistered = false;
 
   private constructor() {}
 
@@ -15,40 +24,44 @@ class Database {
 
   public async connect(): Promise<void> {
     try {
-      const mongoUri =
-        process.env.MONGODB_URI || 'mongodb://localhost:27017/chatapp';
-
-      await mongoose.connect(mongoUri);
-
-      mongoose.connection.on('connected', () => {
-        logger.info('Connected to MongoDB');
-      });
-
-      mongoose.connection.on('error', error => {
-        logger.error('MongoDB connection error:', error);
-      });
-
-      mongoose.connection.on('disconnected', () => {
-        logger.warn('MongoDB disconnected');
-      });
-
-      process.on('SIGINT', () => {
-        void (async () => {
-          await mongoose.connection.close();
-          logger.info(
-            'MongoDB connection closed due to application termination'
-          );
-          process.exit(0);
-        })();
-      });
+      this.registerConnectionListeners();
+      await mongoose.connect(config.mongoose.url);
     } catch (error) {
       logger.error('Failed to connect to MongoDB:', error);
-      process.exit(1);
+      throw error;
     }
   }
 
   public async disconnect(): Promise<void> {
     await mongoose.disconnect();
+  }
+
+  public isHealthy(): boolean {
+    return Number(mongoose.connection.readyState) === 1;
+  }
+
+  public getStatus(): string {
+    return READY_STATE_MAP[mongoose.connection.readyState] ?? 'unknown';
+  }
+
+  private registerConnectionListeners(): void {
+    if (this.listenersRegistered) {
+      return;
+    }
+
+    mongoose.connection.on('connected', () => {
+      logger.info('Connected to MongoDB');
+    });
+
+    mongoose.connection.on('error', error => {
+      logger.error('MongoDB connection error:', error);
+    });
+
+    mongoose.connection.on('disconnected', () => {
+      logger.warn('MongoDB disconnected');
+    });
+
+    this.listenersRegistered = true;
   }
 }
 

@@ -42,6 +42,8 @@ export interface LoginUserData {
 export interface AuthRequest extends Request {
   /** Authenticated user object (set by auth middleware) */
   user?: IUser;
+  /** Request correlation identifier */
+  requestId?: string;
 }
 
 /**
