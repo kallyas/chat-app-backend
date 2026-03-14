@@ -17,8 +17,9 @@ class CreateChatScreen extends StatefulWidget {
 class _CreateChatScreenState extends State<CreateChatScreen> {
   final TextEditingController _searchController = TextEditingController();
   final TextEditingController _groupNameController = TextEditingController();
-  final TextEditingController _groupDescriptionController = TextEditingController();
-  
+  final TextEditingController _groupDescriptionController =
+      TextEditingController();
+
   bool _isGroupChat = false;
   List<User> _searchResults = [];
   List<User> _selectedUsers = [];
@@ -41,13 +42,15 @@ class _CreateChatScreenState extends State<CreateChatScreen> {
 
     final chatProvider = Provider.of<ChatProvider>(context, listen: false);
     final results = await chatProvider.searchUsers(query);
-    
+
     // Filter out current user
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
-    final filteredResults = results.where(
-      (user) => user.id != authProvider.currentUserId,
-    ).toList();
-    
+    final filteredResults = results
+        .where(
+          (user) => user.id != authProvider.currentUserId,
+        )
+        .toList();
+
     setState(() {
       _searchResults = filteredResults;
     });
@@ -79,10 +82,11 @@ class _CreateChatScreenState extends State<CreateChatScreen> {
     }
 
     final chatProvider = Provider.of<ChatProvider>(context, listen: false);
-    
+
     if (_isGroupChat) {
       // Validate group name
-      final groupNameError = Validators.validateChatRoomName(_groupNameController.text);
+      final groupNameError =
+          Validators.validateChatRoomName(_groupNameController.text);
       if (groupNameError != null) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -97,8 +101,8 @@ class _CreateChatScreenState extends State<CreateChatScreen> {
       final chatRoom = await chatProvider.createGroupChat(
         name: _groupNameController.text.trim(),
         participants: _selectedUsers.map((u) => u.id).toList(),
-        description: _groupDescriptionController.text.trim().isNotEmpty 
-            ? _groupDescriptionController.text.trim() 
+        description: _groupDescriptionController.text.trim().isNotEmpty
+            ? _groupDescriptionController.text.trim()
             : null,
       );
 
@@ -258,7 +262,8 @@ class _CreateChatScreenState extends State<CreateChatScreen> {
                             final user = _selectedUsers[index];
                             return Padding(
                               padding: const EdgeInsets.only(right: 12),
-                              child: _buildSelectedUserChip(user, themeProvider),
+                              child:
+                                  _buildSelectedUserChip(user, themeProvider),
                             );
                           },
                         ),
@@ -294,7 +299,8 @@ class _CreateChatScreenState extends State<CreateChatScreen> {
                           )
                         : null,
                     border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(AppConstants.largeBorderRadius),
+                      borderRadius:
+                          BorderRadius.circular(AppConstants.largeBorderRadius),
                       borderSide: BorderSide.none,
                     ),
                     filled: true,
@@ -328,12 +334,12 @@ class _CreateChatScreenState extends State<CreateChatScreen> {
       child: Container(
         padding: const EdgeInsets.all(AppConstants.defaultPadding),
         decoration: BoxDecoration(
-          color: isSelected 
+          color: isSelected
               ? AppConstants.primaryBlue.withOpacity(0.1)
               : themeProvider.surfaceVariantColor,
           border: Border.all(
-            color: isSelected 
-                ? AppConstants.primaryBlue 
+            color: isSelected
+                ? AppConstants.primaryBlue
                 : themeProvider.borderColor,
             width: isSelected ? 2 : 1,
           ),
@@ -343,8 +349,8 @@ class _CreateChatScreenState extends State<CreateChatScreen> {
           children: [
             Icon(
               icon,
-              color: isSelected 
-                  ? AppConstants.primaryBlue 
+              color: isSelected
+                  ? AppConstants.primaryBlue
                   : themeProvider.secondaryTextColor,
               size: 32,
             ),
@@ -352,8 +358,8 @@ class _CreateChatScreenState extends State<CreateChatScreen> {
             Text(
               title,
               style: TextStyle(
-                color: isSelected 
-                    ? AppConstants.primaryBlue 
+                color: isSelected
+                    ? AppConstants.primaryBlue
                     : themeProvider.primaryTextColor,
                 fontWeight: FontWeight.w600,
               ),
@@ -520,8 +526,8 @@ class _CreateChatScreenState extends State<CreateChatScreen> {
             subtitle: Text(
               user.onlineStatusText,
               style: TextStyle(
-                color: user.isOnline 
-                    ? themeProvider.onlineColor 
+                color: user.isOnline
+                    ? themeProvider.onlineColor
                     : themeProvider.secondaryTextColor,
               ),
             ),

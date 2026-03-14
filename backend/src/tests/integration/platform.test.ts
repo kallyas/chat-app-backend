@@ -1,5 +1,6 @@
 import request from 'supertest';
 import { createApp } from '@/app';
+import { isAllowedCorsOrigin } from '@/config/environment';
 import { runtimeState } from '@/config/runtime';
 
 type PlatformResponse = {
@@ -67,5 +68,20 @@ describe('Platform Integration Tests', () => {
 
     expect(response.headers['x-request-id']).toBeDefined();
     expect(body.requestId).toBe(response.headers['x-request-id']);
+  });
+
+  it('should allow localhost dev origins for CORS preflight requests', async () => {
+    const origin = 'http://localhost:50982';
+
+    expect(isAllowedCorsOrigin(origin)).toBe(true);
+
+    const response = await request(app)
+      .options('/api/auth/register')
+      .set('Origin', origin)
+      .set('Access-Control-Request-Method', 'POST')
+      .expect(204);
+
+    expect(response.headers['access-control-allow-origin']).toBe(origin);
+    expect(response.headers['access-control-allow-credentials']).toBe('true');
   });
 });

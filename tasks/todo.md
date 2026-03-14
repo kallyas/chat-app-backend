@@ -17,6 +17,15 @@ This second pass focuses on making `backend` lint-clean with minimal risk:
 - fix remaining production-code lint errors in services, models, sockets, and routes
 - re-enable lint as a green CI gate only after it passes locally
 
+## Mobile Redesign Scope
+
+This pass focuses on the Flutter app experience and runtime behavior:
+
+- define a more intentional visual system for mobile instead of the current generic Material seed setup
+- redesign the login flow, home shell, chat list, and chat thread for clearer hierarchy and better mobile ergonomics
+- improve perceived performance by reducing avoidable rebuilds and preserving high-traffic screen state
+- verify the redesign with Flutter static analysis
+
 ## Plan
 
 - [x] Audit current backend runtime, middleware, and CI behavior
@@ -34,6 +43,13 @@ This second pass focuses on making `backend` lint-clean with minimal risk:
 - [x] Fix remaining production-code lint violations in backend source files
 - [x] Re-enable lint in CI once `yarn lint` passes locally
 - [x] Re-run build, lint, and tests and document results
+- [x] Audit mobile theme, screen composition, and rebuild hotspots
+- [x] Redesign the shared mobile theme and visual primitives
+- [x] Redesign the authentication entry screen
+- [x] Redesign the home shell and chat list experience
+- [x] Redesign the chat conversation screen and composer
+- [x] Improve provider-driven rebuild behavior where it affects performance
+- [x] Run formatting and Flutter analysis and document the results
 
 ## Verification Spec
 
@@ -47,6 +63,8 @@ This second pass focuses on making `backend` lint-clean with minimal risk:
 - [x] `cd backend && yarn lint` passes
 - [x] `cd backend && yarn build` still passes after lint fixes
 - [x] `cd backend && yarn test` still passes after lint fixes
+- [x] `cd mobile && dart format lib`
+- [x] `cd mobile && flutter analyze --no-fatal-infos`
 
 ## Review
 
@@ -76,3 +94,19 @@ This second pass focuses on making `backend` lint-clean with minimal risk:
 - Remaining debt:
   - there are still warning-level TypeScript lint findings in [`backend/src/services/chatService.ts`](/Users/tum/programming/personal/chat-app/backend/src/services/chatService.ts), [`backend/src/sockets/chatEvents.ts`](/Users/tum/programming/personal/chat-app/backend/src/sockets/chatEvents.ts), [`backend/src/utils/logUtils.ts`](/Users/tum/programming/personal/chat-app/backend/src/utils/logUtils.ts), and [`backend/src/utils/pagination.ts`](/Users/tum/programming/personal/chat-app/backend/src/utils/pagination.ts)
   - these warnings do not block CI today, but the next quality pass should convert the remaining `any` and non-null assertions into fully typed helpers
+- Mobile redesign pass completed:
+  - replaced the generic theme with a more intentional teal, coral, and sand visual system for light and dark modes in [`mobile/lib/providers/theme_provider.dart`](/Users/tum/programming/personal/chat-app/mobile/lib/providers/theme_provider.dart)
+  - redesigned the auth loading state, home shell, inbox header, and chat thread to create a clearer hierarchy and more distinctive mobile UX
+  - preserved tab state in the home shell with `IndexedStack` and reduced broad provider rebuilds in inbox and thread flows through `context.select`
+  - hardened chat initialization so socket callbacks are only bound once and room selection no longer risks null fallback crashes
+- Mobile verification completed:
+  - `cd mobile && dart format lib`
+  - `cd mobile && flutter analyze --no-fatal-infos`
+- Mobile current status:
+  - formatting passed
+  - static analysis completed with no warnings or errors
+  - the package still has `info`-level debt in older files, mostly `print`, deprecated Flutter API usage, and minor style issues outside this redesign scope
+- Mobile remaining debt:
+  - replace `print`-based diagnostics in providers and services with structured logging or debug-only logging
+  - clear deprecated `withOpacity` and `Radio` API usage across auth, settings, and chat-adjacent screens
+  - add widget and golden tests for the redesigned auth, inbox, and thread screens before treating the mobile UI as regression-safe

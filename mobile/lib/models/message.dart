@@ -1,6 +1,7 @@
 import 'user.dart';
 
 enum MessageType { text, image, file }
+
 enum MessageStatus { sent, delivered, read }
 
 class MessageMetadata {
@@ -77,6 +78,7 @@ class Message {
   final String? replyToId;
   final Message? replyTo;
   final MessageMetadata? metadata;
+  final bool isDeleted;
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -94,18 +96,27 @@ class Message {
     this.replyToId,
     this.replyTo,
     this.metadata,
+    required this.isDeleted,
     required this.createdAt,
     required this.updatedAt,
   });
 
   factory Message.fromJson(Map<String, dynamic> json) {
+    final senderPayload = _extractSenderPayload(json);
+    final senderIdValue = json['senderId'];
+
     return Message(
       id: json['_id']?.toString() ?? json['id']?.toString() ?? '',
       chatRoomId: json['chatRoomId']?.toString() ?? '',
-      senderId: json['senderId']?.toString() ?? json['sender']?['_id']?.toString() ?? json['sender']?['id']?.toString() ?? '',
-      sender: json['sender'] is Map<String, dynamic> 
-          ? User.fromJson(json['sender'])
-          : null,
+      senderId: senderIdValue is Map<String, dynamic>
+          ? senderIdValue['_id']?.toString() ??
+              senderIdValue['id']?.toString() ??
+              ''
+          : senderIdValue?.toString() ??
+              senderPayload?['_id']?.toString() ??
+              senderPayload?['id']?.toString() ??
+              '',
+      sender: senderPayload != null ? User.fromJson(senderPayload) : null,
       content: json['content']?.toString() ?? '',
       type: MessageType.values.firstWhere(
         (e) => e.name == (json['type'] ?? json['messageType']),
@@ -116,21 +127,23 @@ class Message {
         orElse: () => MessageStatus.sent,
       ),
       readBy: (json['readBy'] as List<dynamic>?)
-          ?.map((r) => ReadReceipt.fromJson(r))
-          .toList() ?? [],
+              ?.map((r) => ReadReceipt.fromJson(r))
+              .toList() ??
+          [],
       edited: json['edited'] ?? false,
-      editedAt: json['editedAt'] != null 
+      editedAt: json['editedAt'] != null
           ? DateTime.tryParse(json['editedAt'].toString())
           : null,
-      replyToId: json['replyTo'] is String 
-          ? json['replyTo'] 
+      replyToId: json['replyTo'] is String
+          ? json['replyTo']
           : json['replyTo']?['_id']?.toString(),
       replyTo: json['replyTo'] is Map<String, dynamic>
           ? Message.fromJson(json['replyTo'])
           : null,
-      metadata: json['metadata'] != null 
+      metadata: json['metadata'] != null
           ? MessageMetadata.fromJson(json['metadata'])
           : null,
+      isDeleted: json['isDeleted'] == true,
       createdAt: _parseDateTime(json['createdAt']) ?? DateTime.now(),
       updatedAt: _parseDateTime(json['updatedAt']) ?? DateTime.now(),
     );
@@ -141,6 +154,21 @@ class Message {
     if (dateValue is String) {
       return DateTime.tryParse(dateValue);
     }
+    return null;
+  }
+
+  static Map<String, dynamic>? _extractSenderPayload(
+      Map<String, dynamic> json) {
+    final sender = json['sender'];
+    if (sender is Map<String, dynamic>) {
+      return sender;
+    }
+
+    final senderId = json['senderId'];
+    if (senderId is Map<String, dynamic>) {
+      return senderId;
+    }
+
     return null;
   }
 
@@ -158,6 +186,7 @@ class Message {
       'editedAt': editedAt?.toIso8601String(),
       'replyTo': replyToId,
       'metadata': metadata?.toJson(),
+      'isDeleted': isDeleted,
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt.toIso8601String(),
     };
@@ -177,6 +206,7 @@ class Message {
     String? replyToId,
     Message? replyTo,
     MessageMetadata? metadata,
+    bool? isDeleted,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) {
@@ -194,6 +224,7 @@ class Message {
       replyToId: replyToId ?? this.replyToId,
       replyTo: replyTo ?? this.replyTo,
       metadata: metadata ?? this.metadata,
+      isDeleted: isDeleted ?? this.isDeleted,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );
@@ -221,6 +252,10 @@ class Message {
   String get senderName => sender?.username ?? 'Unknown';
 
   String get displayContent {
+    if (isDeleted) {
+      return 'Message deleted';
+    }
+
     switch (type) {
       case MessageType.text:
         return content;
@@ -259,27 +294,28 @@ class Message {
   String get formattedDate {
     final now = DateTime.now();
     final messageDate = createdAt;
-    
+
     if (messageDate.year == now.year &&
         messageDate.month == now.month &&
         messageDate.day == now.day) {
       return 'Today';
     }
-    
+
     final yesterday = now.subtract(const Duration(days: 1));
     if (messageDate.year == yesterday.year &&
         messageDate.month == yesterday.month &&
         messageDate.day == yesterday.day) {
       return 'Yesterday';
     }
-    
+
     return '${messageDate.day}/${messageDate.month}/${messageDate.year}';
   }
 
   bool get canEdit {
     // Messages can be edited within 24 hours of sending (backend enforced)
     const editWindow = Duration(hours: 24);
-    return DateTime.now().difference(createdAt) < editWindow && type == MessageType.text;
+    return DateTime.now().difference(createdAt) < editWindow &&
+        type == MessageType.text;
   }
 
   bool get canDelete {
@@ -305,7 +341,7 @@ class Message {
 
   String? get fileSizeFormatted {
     if (metadata?.fileSize == null) return null;
-    
+
     final bytes = metadata!.fileSize!;
     if (bytes < 1024) return '${bytes}B';
     if (bytes < 1024 * 1024) return '${(bytes / 1024).toStringAsFixed(1)}KB';

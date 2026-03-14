@@ -36,26 +36,32 @@ class StorageService {
     required String token,
     required String refreshToken,
   }) async {
+    await _writeSecureValue(_tokenKey, token);
+    await _writeSecureValue(_refreshTokenKey, refreshToken);
     await Future.wait([
-      _secureStorage.write(key: _tokenKey, value: token),
-      _secureStorage.write(key: _refreshTokenKey, value: refreshToken),
+      _prefs?.setString(_tokenKey, token) ?? Future.value(true),
+      _prefs?.setString(_refreshTokenKey, refreshToken) ?? Future.value(true),
     ]);
   }
 
   static Future<String?> getAuthToken() async {
-    return await _secureStorage.read(key: _tokenKey);
+    return _readAuthValue(_tokenKey);
   }
 
   static Future<String?> getRefreshToken() async {
-    return await _secureStorage.read(key: _refreshTokenKey);
+    return _readAuthValue(_refreshTokenKey);
   }
 
   static Future<void> clearAuthTokens() async {
     await Future.wait([
-      _secureStorage.delete(key: _tokenKey),
-      _secureStorage.delete(key: _refreshTokenKey),
-      _secureStorage.delete(key: _userIdKey),
-      _secureStorage.delete(key: _userEmailKey),
+      _deleteSecureValue(_tokenKey),
+      _deleteSecureValue(_refreshTokenKey),
+      _deleteSecureValue(_userIdKey),
+      _deleteSecureValue(_userEmailKey),
+      _prefs?.remove(_tokenKey) ?? Future.value(true),
+      _prefs?.remove(_refreshTokenKey) ?? Future.value(true),
+      _prefs?.remove(_userIdKey) ?? Future.value(true),
+      _prefs?.remove(_userEmailKey) ?? Future.value(true),
     ]);
   }
 
@@ -64,18 +70,20 @@ class StorageService {
     required String userId,
     required String email,
   }) async {
+    await _writeSecureValue(_userIdKey, userId);
+    await _writeSecureValue(_userEmailKey, email);
     await Future.wait([
-      _secureStorage.write(key: _userIdKey, value: userId),
-      _secureStorage.write(key: _userEmailKey, value: email),
+      _prefs?.setString(_userIdKey, userId) ?? Future.value(true),
+      _prefs?.setString(_userEmailKey, email) ?? Future.value(true),
     ]);
   }
 
   static Future<String?> getUserId() async {
-    return await _secureStorage.read(key: _userIdKey);
+    return _readAuthValue(_userIdKey);
   }
 
   static Future<String?> getUserEmail() async {
-    return await _secureStorage.read(key: _userEmailKey);
+    return _readAuthValue(_userEmailKey);
   }
 
   // App Preferences
@@ -129,7 +137,8 @@ class StorageService {
     return _prefs?.getString('cached_chat_rooms');
   }
 
-  static Future<void> saveMessages(String chatRoomId, String messagesJson) async {
+  static Future<void> saveMessages(
+      String chatRoomId, String messagesJson) async {
     await _prefs?.setString('cached_messages_$chatRoomId', messagesJson);
   }
 
@@ -142,7 +151,9 @@ class StorageService {
   }
 
   static Future<void> clearAllCachedData() async {
-    final keys = _prefs?.getKeys().where((key) => key.startsWith('cached_')).toList() ?? [];
+    final keys =
+        _prefs?.getKeys().where((key) => key.startsWith('cached_')).toList() ??
+            [];
     for (final key in keys) {
       await _prefs?.remove(key);
     }
@@ -164,7 +175,8 @@ class StorageService {
   }
 
   // Draft Message Management
-  static Future<void> saveDraftMessage(String chatRoomId, String message) async {
+  static Future<void> saveDraftMessage(
+      String chatRoomId, String message) async {
     await _prefs?.setString('draft_$chatRoomId', message);
   }
 
@@ -201,12 +213,47 @@ class StorageService {
   static Map<String, dynamic>? getAllPreferencesData() {
     final keys = _prefs?.getKeys() ?? <String>{};
     final Map<String, dynamic> data = {};
-    
+
     for (final key in keys) {
       final value = _prefs?.get(key);
       data[key] = value;
     }
-    
+
     return data.isEmpty ? null : data;
+  }
+
+  static Future<void> _writeSecureValue(String key, String value) async {
+    try {
+      await _secureStorage.write(key: key, value: value);
+    } catch (_) {
+      // Fall back to shared preferences for environments where secure storage
+      // is unavailable or restricted.
+    }
+  }
+
+  static Future<void> _deleteSecureValue(String key) async {
+    try {
+      await _secureStorage.delete(key: key);
+    } catch (_) {
+      // Ignore secure storage cleanup failures and remove fallback values.
+    }
+  }
+
+  static Future<String?> _readAuthValue(String key) async {
+    try {
+      final secureValue = await _secureStorage.read(key: key);
+      if (secureValue != null && secureValue.isNotEmpty) {
+        return secureValue;
+      }
+    } catch (_) {
+      // Ignore and fall back to shared preferences.
+    }
+
+    final fallbackValue = _prefs?.getString(key);
+    if (fallbackValue == null || fallbackValue.isEmpty) {
+      return null;
+    }
+
+    return fallbackValue;
   }
 }

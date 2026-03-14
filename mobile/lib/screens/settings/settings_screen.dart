@@ -31,7 +31,8 @@ class SettingsScreen extends StatelessWidget {
                     ListTile(
                       leading: const Icon(Icons.dark_mode),
                       title: const Text('Dark Mode'),
-                      subtitle: Text(_getThemeModeText(themeProvider.themeMode)),
+                      subtitle:
+                          Text(_getThemeModeText(themeProvider.themeMode)),
                       trailing: const Icon(Icons.arrow_forward_ios),
                       onTap: () => _showThemeDialog(context, themeProvider),
                     ),
@@ -51,7 +52,8 @@ class SettingsScreen extends StatelessWidget {
                     ListTile(
                       leading: const Icon(Icons.notifications),
                       title: const Text('Push Notifications'),
-                      subtitle: const Text('Receive notifications for new messages'),
+                      subtitle:
+                          const Text('Receive notifications for new messages'),
                       trailing: Switch(
                         value: true, // TODO: Get from storage
                         onChanged: (value) {
@@ -155,7 +157,8 @@ class SettingsScreen extends StatelessWidget {
                     ListTile(
                       leading: const Icon(Icons.download),
                       title: const Text('Auto-download Media'),
-                      subtitle: const Text('Automatically download images and files'),
+                      subtitle:
+                          const Text('Automatically download images and files'),
                       trailing: const Icon(Icons.arrow_forward_ios),
                       onTap: () {
                         // TODO: Navigate to auto-download settings
@@ -165,7 +168,8 @@ class SettingsScreen extends StatelessWidget {
                     ListTile(
                       leading: const Icon(Icons.delete_sweep),
                       title: const Text('Clear Cache'),
-                      subtitle: const Text('Free up space by clearing cached data'),
+                      subtitle:
+                          const Text('Free up space by clearing cached data'),
                       trailing: const Icon(Icons.arrow_forward_ios),
                       onTap: () => _showClearCacheDialog(context),
                     ),
@@ -223,7 +227,8 @@ class SettingsScreen extends StatelessWidget {
                 child: Column(
                   children: [
                     ListTile(
-                      leading: const Icon(Icons.logout, color: AppConstants.errorRed),
+                      leading: const Icon(Icons.logout,
+                          color: AppConstants.errorRed),
                       title: const Text(
                         'Logout',
                         style: TextStyle(color: AppConstants.errorRed),
@@ -233,7 +238,8 @@ class SettingsScreen extends StatelessWidget {
                     ),
                     const Divider(height: 1),
                     ListTile(
-                      leading: const Icon(Icons.delete_forever, color: AppConstants.errorRed),
+                      leading: const Icon(Icons.delete_forever,
+                          color: AppConstants.errorRed),
                       title: const Text(
                         'Delete Account',
                         style: TextStyle(color: AppConstants.errorRed),

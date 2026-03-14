@@ -104,7 +104,8 @@ class Formatters {
   static String formatMessageTime(DateTime messageTime) {
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
-    final messageDate = DateTime(messageTime.year, messageTime.month, messageTime.day);
+    final messageDate =
+        DateTime(messageTime.year, messageTime.month, messageTime.day);
 
     if (messageDate == today) {
       return formatChatTime(messageTime);
@@ -137,23 +138,23 @@ class Formatters {
   // Format file size
   static String formatFileSize(int bytes) {
     if (bytes <= 0) return '0 B';
-    
+
     const suffixes = ['B', 'KB', 'MB', 'GB', 'TB'];
     int i = 0;
     double size = bytes.toDouble();
-    
+
     while (size >= 1024 && i < suffixes.length - 1) {
       size /= 1024;
       i++;
     }
-    
+
     String formattedSize;
     if (size < 10) {
       formattedSize = size.toStringAsFixed(1);
     } else {
       formattedSize = size.toStringAsFixed(0);
     }
-    
+
     return '$formattedSize ${suffixes[i]}';
   }
 
@@ -181,7 +182,7 @@ class Formatters {
   // Format duration
   static String formatDuration(Duration duration) {
     String twoDigits(int n) => n.toString().padLeft(2, '0');
-    
+
     if (duration.inHours > 0) {
       return '${twoDigits(duration.inHours)}:${twoDigits(duration.inMinutes.remainder(60))}:${twoDigits(duration.inSeconds.remainder(60))}';
     } else {
@@ -192,7 +193,7 @@ class Formatters {
   // Format typing indicator text
   static String formatTypingIndicator(List<String> typingUsers) {
     if (typingUsers.isEmpty) return '';
-    
+
     if (typingUsers.length == 1) {
       return '${typingUsers.first} is typing...';
     } else if (typingUsers.length == 2) {
@@ -203,9 +204,11 @@ class Formatters {
   }
 
   // Format chat room participants
-  static String formatParticipants(List<String> participants, String currentUserId) {
-    final otherParticipants = participants.where((id) => id != currentUserId).toList();
-    
+  static String formatParticipants(
+      List<String> participants, String currentUserId) {
+    final otherParticipants =
+        participants.where((id) => id != currentUserId).toList();
+
     if (otherParticipants.isEmpty) {
       return 'Just you';
     } else if (otherParticipants.length == 1) {
@@ -230,7 +233,7 @@ class Formatters {
   static String formatPhoneNumber(String phoneNumber) {
     // Remove all non-digit characters
     final digitsOnly = phoneNumber.replaceAll(RegExp(r'\D'), '');
-    
+
     if (digitsOnly.length == 10) {
       // US format: (123) 456-7890
       return '(${digitsOnly.substring(0, 3)}) ${digitsOnly.substring(3, 6)}-${digitsOnly.substring(6)}';
@@ -252,14 +255,14 @@ class Formatters {
   static String formatEmailForDisplay(String email) {
     final parts = email.split('@');
     if (parts.length != 2) return email;
-    
+
     final username = parts[0];
     final domain = parts[1];
-    
+
     if (username.length <= 3) {
       return email;
     }
-    
+
     final hiddenPart = '*' * (username.length - 2);
     return '${username.substring(0, 1)}$hiddenPart${username.substring(username.length - 1)}@$domain';
   }
@@ -272,13 +275,14 @@ class Formatters {
   // Format initials from name
   static String formatInitials(String name) {
     final words = name.trim().split(RegExp(r'\s+'));
-    
+
     if (words.isEmpty) return '';
-    
+
     if (words.length == 1) {
       return words[0].substring(0, 1).toUpperCase();
     } else {
-      return '${words[0].substring(0, 1)}${words[1].substring(0, 1)}'.toUpperCase();
+      return '${words[0].substring(0, 1)}${words[1].substring(0, 1)}'
+          .toUpperCase();
     }
   }
 
@@ -286,7 +290,7 @@ class Formatters {
   static String formatName(String firstName, String lastName) {
     final first = firstName.trim();
     final last = lastName.trim();
-    
+
     if (first.isEmpty && last.isEmpty) {
       return 'Unknown User';
     } else if (first.isEmpty) {
@@ -308,7 +312,7 @@ class Formatters {
     if (content.length <= maxLength) {
       return content;
     }
-    
+
     return '${content.substring(0, maxLength)}...';
   }
 
@@ -328,11 +332,12 @@ class Formatters {
   }
 
   // Format list to comma-separated string
-  static String formatList(List<String> items, {String separator = ', ', String lastSeparator = ' and '}) {
+  static String formatList(List<String> items,
+      {String separator = ', ', String lastSeparator = ' and '}) {
     if (items.isEmpty) return '';
     if (items.length == 1) return items.first;
     if (items.length == 2) return '${items.first}$lastSeparator${items.last}';
-    
+
     final allButLast = items.sublist(0, items.length - 1).join(separator);
     return '$allButLast$lastSeparator${items.last}';
   }

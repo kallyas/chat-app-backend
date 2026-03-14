@@ -91,7 +91,7 @@ class AuthService {
       // Still clear local data even if API call fails
       await StorageService.clearAuthTokens();
       await StorageService.clearAllCachedData();
-      
+
       return ApiResponse.success(message: 'Logged out successfully');
     }
   }
@@ -198,7 +198,7 @@ class AuthService {
         // Save new tokens
         final newToken = response.data!['token'];
         final newRefreshToken = response.data!['refreshToken'];
-        
+
         await StorageService.saveAuthTokens(
           token: newToken,
           refreshToken: newRefreshToken,
@@ -276,8 +276,7 @@ class AuthService {
   // Validate email format
   // Updated to match backend: allows modern TLDs and plus-addressing
   static bool isValidEmail(String email) {
-    return RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]+$')
-        .hasMatch(email);
+    return RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]+$').hasMatch(email);
   }
 
   // Validate password strength
@@ -295,13 +294,13 @@ class AuthService {
   // Get password strength score (0-4)
   static int getPasswordStrength(String password) {
     int score = 0;
-    
+
     if (password.length >= 8) score++;
     if (RegExp(r'[a-z]').hasMatch(password)) score++;
     if (RegExp(r'[A-Z]').hasMatch(password)) score++;
     if (RegExp(r'[0-9]').hasMatch(password)) score++;
     if (RegExp(r'[!@#$%^&*(),.?":{}|<>]').hasMatch(password)) score++;
-    
+
     return score;
   }
 

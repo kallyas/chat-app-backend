@@ -33,11 +33,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   Future<void> _handleRegister() async {
     if (!_formKey.currentState!.validate()) return;
-    
+
     if (!_acceptTerms) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Please accept the Terms of Service and Privacy Policy'),
+          content:
+              Text('Please accept the Terms of Service and Privacy Policy'),
           backgroundColor: Colors.red,
         ),
       );
@@ -45,7 +46,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     }
 
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
-    
+
     final success = await authProvider.register(
       username: _usernameController.text.trim(),
       email: _emailController.text.trim(),
@@ -94,23 +95,27 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         children: [
                           Text(
                             'Join ${AppConstants.appName}',
-                            style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                              fontWeight: FontWeight.bold,
-                            ),
+                            style: Theme.of(context)
+                                .textTheme
+                                .headlineMedium
+                                ?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                ),
                           ),
                           const SizedBox(height: AppConstants.smallPadding),
                           Text(
                             'Create your account to get started',
-                            style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                              color: themeProvider.secondaryTextColor,
-                            ),
+                            style:
+                                Theme.of(context).textTheme.bodyLarge?.copyWith(
+                                      color: themeProvider.secondaryTextColor,
+                                    ),
                           ),
                         ],
                       ),
                     ),
-                    
+
                     const SizedBox(height: 40),
-                    
+
                     // Username field
                     TextFormField(
                       controller: _usernameController,
@@ -120,12 +125,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         labelText: 'Username',
                         hintText: 'Choose a username',
                         prefixIcon: Icon(Icons.person_outlined),
-                        helperText: '3-30 characters, letters, numbers, _ and -',
+                        helperText:
+                            '3-30 characters, letters, numbers, _ and -',
                       ),
                     ),
-                    
+
                     const SizedBox(height: AppConstants.defaultPadding),
-                    
+
                     // Email field
                     TextFormField(
                       controller: _emailController,
@@ -138,9 +144,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         prefixIcon: Icon(Icons.email_outlined),
                       ),
                     ),
-                    
+
                     const SizedBox(height: AppConstants.defaultPadding),
-                    
+
                     // Password field
                     TextFormField(
                       controller: _passwordController,
@@ -148,7 +154,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       textInputAction: TextInputAction.next,
                       validator: Validators.validatePassword,
                       onChanged: (value) {
-                        setState(() {}); // Trigger rebuild for password strength
+                        setState(
+                            () {}); // Trigger rebuild for password strength
                       },
                       decoration: InputDecoration(
                         labelText: 'Password',
@@ -168,15 +175,15 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         ),
                       ),
                     ),
-                    
+
                     // Password strength indicator
                     if (_passwordController.text.isNotEmpty) ...[
                       const SizedBox(height: AppConstants.smallPadding),
                       _buildPasswordStrengthIndicator(authProvider),
                     ],
-                    
+
                     const SizedBox(height: AppConstants.defaultPadding),
-                    
+
                     // Confirm password field
                     TextFormField(
                       controller: _confirmPasswordController,
@@ -199,15 +206,16 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           ),
                           onPressed: () {
                             setState(() {
-                              _obscureConfirmPassword = !_obscureConfirmPassword;
+                              _obscureConfirmPassword =
+                                  !_obscureConfirmPassword;
                             });
                           },
                         ),
                       ),
                     ),
-                    
+
                     const SizedBox(height: AppConstants.defaultPadding),
-                    
+
                     // Terms and conditions checkbox
                     Row(
                       children: [
@@ -249,18 +257,20 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         ),
                       ],
                     ),
-                    
+
                     const SizedBox(height: AppConstants.largePadding),
-                    
+
                     // Register button
                     ElevatedButton(
-                      onPressed: authProvider.isLoading ? null : _handleRegister,
+                      onPressed:
+                          authProvider.isLoading ? null : _handleRegister,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppConstants.primaryBlue,
                         foregroundColor: Colors.white,
                         padding: const EdgeInsets.symmetric(vertical: 16),
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(AppConstants.defaultBorderRadius),
+                          borderRadius: BorderRadius.circular(
+                              AppConstants.defaultBorderRadius),
                         ),
                       ),
                       child: authProvider.isLoading
@@ -269,7 +279,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                               width: 20,
                               child: CircularProgressIndicator(
                                 strokeWidth: 2,
-                                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                valueColor:
+                                    AlwaysStoppedAnimation<Color>(Colors.white),
                               ),
                             )
                           : const Text(
@@ -280,9 +291,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                               ),
                             ),
                     ),
-                    
+
                     const SizedBox(height: AppConstants.largePadding),
-                    
+
                     // Sign in link
                     Center(
                       child: TextButton(

@@ -1,7 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
-import { config } from '@/config/environment';
+import { config, isAllowedCorsOrigin } from '@/config/environment';
 import {
   globalErrorHandler,
   notFound,
@@ -13,6 +13,19 @@ import routes from '@/routes';
 
 export const createApp = () => {
   const app = express();
+  const corsOptions: cors.CorsOptions = {
+    origin(origin, callback) {
+      if (isAllowedCorsOrigin(origin)) {
+        callback(null, true);
+        return;
+      }
+
+      callback(new Error(`CORS origin not allowed: ${origin}`));
+    },
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+  };
 
   // Request ID middleware (should be first)
   app.use(addRequestId);
@@ -21,14 +34,7 @@ export const createApp = () => {
   app.use(helmet());
 
   // CORS configuration
-  app.use(
-    cors({
-      origin: config.cors.origins,
-      credentials: true,
-      methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-      allowedHeaders: ['Content-Type', 'Authorization'],
-    })
-  );
+  app.use(cors(corsOptions));
 
   // Rate limiting
   app.use(generalLimiter);

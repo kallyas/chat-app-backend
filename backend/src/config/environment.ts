@@ -70,3 +70,22 @@ export const config = {
     shutdownTimeoutMs: 30000,
   },
 };
+
+const localhostOriginPattern =
+  /^https?:\/\/(localhost|127\.0\.0\.1|\[::1\])(?::\d+)?$/i;
+
+export const isAllowedCorsOrigin = (origin?: string): boolean => {
+  if (!origin) {
+    return true;
+  }
+
+  if (config.cors.origins.includes(origin)) {
+    return true;
+  }
+
+  if (!config.isProduction && localhostOriginPattern.test(origin)) {
+    return true;
+  }
+
+  return false;
+};

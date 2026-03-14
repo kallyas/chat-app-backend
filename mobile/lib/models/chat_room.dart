@@ -41,13 +41,23 @@ class ChatRoom {
         orElse: () => ChatRoomType.private,
       ),
       participants: (json['participants'] as List<dynamic>?)
-          ?.map((p) => User.fromJson(p is Map<String, dynamic> ? p : {'_id': p.toString(), 'username': '', 'email': '', 'isOnline': false, 'createdAt': DateTime.now().toIso8601String(), 'updatedAt': DateTime.now().toIso8601String()}))
-          .toList() ?? [],
+              ?.map((p) => User.fromJson(p is Map<String, dynamic>
+                  ? p
+                  : {
+                      '_id': p.toString(),
+                      'username': '',
+                      'email': '',
+                      'isOnline': false,
+                      'createdAt': DateTime.now().toIso8601String(),
+                      'updatedAt': DateTime.now().toIso8601String()
+                    }))
+              .toList() ??
+          [],
       description: json['description']?.toString(),
       avatar: json['avatar']?.toString(),
       createdBy: _extractCreatedBy(json),
       isActive: json['isActive'] ?? true,
-      lastMessage: json['lastMessage'] != null 
+      lastMessage: json['lastMessage'] != null
           ? Message.fromJson(json['lastMessage'])
           : null,
       unreadCount: json['unreadCount'] ?? 0,
@@ -138,7 +148,7 @@ class ChatRoom {
     if (type == ChatRoomType.group) {
       return name ?? 'Group Chat';
     }
-    
+
     // For private chats, return the other participant's name
     final otherParticipant = participants.firstWhere(
       (p) => p.id != currentUserId,
@@ -151,7 +161,7 @@ class ChatRoom {
     if (type == ChatRoomType.group) {
       return avatar ?? '';
     }
-    
+
     // For private chats, return the other participant's avatar
     final otherParticipant = participants.firstWhere(
       (p) => p.id != currentUserId,
@@ -167,12 +177,12 @@ class ChatRoom {
       if (words.length >= 2) {
         return '${words[0][0]}${words[1][0]}'.toUpperCase();
       } else {
-        return displayName.length >= 2 
+        return displayName.length >= 2
             ? displayName.substring(0, 2).toUpperCase()
             : displayName.toUpperCase();
       }
     }
-    
+
     // For private chats, return the other participant's initials
     final otherParticipant = participants.firstWhere(
       (p) => p.id != currentUserId,
@@ -185,7 +195,7 @@ class ChatRoom {
     if (type == ChatRoomType.group) {
       return participants.any((p) => p.id != currentUserId && p.isOnline);
     }
-    
+
     // For private chats, check if the other participant is online
     final otherParticipant = participants.firstWhere(
       (p) => p.id != currentUserId,
@@ -196,13 +206,14 @@ class ChatRoom {
 
   String getLastSeenText(String currentUserId) {
     if (type == ChatRoomType.group) {
-      final onlineCount = participants.where((p) => p.id != currentUserId && p.isOnline).length;
+      final onlineCount =
+          participants.where((p) => p.id != currentUserId && p.isOnline).length;
       if (onlineCount > 0) {
         return '$onlineCount online';
       }
       return '${participants.length - 1} members';
     }
-    
+
     // For private chats, return the other participant's online status
     final otherParticipant = participants.firstWhere(
       (p) => p.id != currentUserId,
@@ -213,7 +224,7 @@ class ChatRoom {
 
   String? getLastMessagePreview() {
     if (lastMessage == null) return null;
-    
+
     final msg = lastMessage!;
     switch (msg.type) {
       case MessageType.text:
@@ -222,8 +233,6 @@ class ChatRoom {
         return '📷 Image';
       case MessageType.file:
         return '📎 File';
-      default:
-        return msg.content;
     }
   }
 }

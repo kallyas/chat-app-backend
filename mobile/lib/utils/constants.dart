@@ -24,8 +24,20 @@ class AppConstants {
 
   // File upload
   static const int maxFileSize = 10 * 1024 * 1024; // 10MB
-  static const List<String> allowedImageTypes = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
-  static const List<String> allowedFileTypes = ['pdf', 'doc', 'docx', 'txt', 'zip'];
+  static const List<String> allowedImageTypes = [
+    'jpg',
+    'jpeg',
+    'png',
+    'gif',
+    'webp'
+  ];
+  static const List<String> allowedFileTypes = [
+    'pdf',
+    'doc',
+    'docx',
+    'txt',
+    'zip'
+  ];
 
   // UI constants
   static const double defaultPadding = 16.0;
@@ -63,7 +75,8 @@ class AppConstants {
   // Notification settings
   static const String notificationChannelId = 'chat_notifications';
   static const String notificationChannelName = 'Chat Notifications';
-  static const String notificationChannelDescription = 'Receive notifications for new messages';
+  static const String notificationChannelDescription =
+      'Receive notifications for new messages';
 
   // Shared preference keys
   static const String themeModeKey = 'theme_mode';
@@ -74,30 +87,40 @@ class AppConstants {
   static const String lastSyncKey = 'last_sync_timestamp';
 
   // Error messages
-  static const String networkErrorMessage = 'Network error. Please check your connection.';
-  static const String serverErrorMessage = 'Server error. Please try again later.';
-  static const String unauthorizedErrorMessage = 'Unauthorized access. Please login again.';
-  static const String timeoutErrorMessage = 'Request timeout. Please try again.';
+  static const String networkErrorMessage =
+      'Network error. Please check your connection.';
+  static const String serverErrorMessage =
+      'Server error. Please try again later.';
+  static const String unauthorizedErrorMessage =
+      'Unauthorized access. Please login again.';
+  static const String timeoutErrorMessage =
+      'Request timeout. Please try again.';
   static const String unknownErrorMessage = 'An unexpected error occurred.';
 
   // Success messages
   static const String loginSuccessMessage = 'Welcome back!';
   static const String registerSuccessMessage = 'Account created successfully!';
   static const String logoutSuccessMessage = 'Logged out successfully';
-  static const String passwordResetRequestSuccessMessage = 'Password reset email sent';
-  static const String passwordResetSuccessMessage = 'Password reset successfully';
-  static const String profileUpdateSuccessMessage = 'Profile updated successfully';
+  static const String passwordResetRequestSuccessMessage =
+      'Password reset email sent';
+  static const String passwordResetSuccessMessage =
+      'Password reset successfully';
+  static const String profileUpdateSuccessMessage =
+      'Profile updated successfully';
 
   // Input validation messages
   static const String emailRequiredMessage = 'Email is required';
   static const String emailInvalidMessage = 'Please enter a valid email';
   static const String passwordRequiredMessage = 'Password is required';
-  static const String passwordTooShortMessage = 'Password must be at least 6 characters';
+  static const String passwordTooShortMessage =
+      'Password must be at least 6 characters';
   static const String usernameRequiredMessage = 'Username is required';
-  static const String usernameInvalidMessage = 'Username must be 3-30 characters with only letters, numbers, _ and -';
+  static const String usernameInvalidMessage =
+      'Username must be 3-30 characters with only letters, numbers, _ and -';
   static const String passwordMismatchMessage = 'Passwords do not match';
   static const String messageRequiredMessage = 'Message cannot be empty';
-  static const String messageTooLongMessage = 'Message is too long (max 2000 characters)';
+  static const String messageTooLongMessage =
+      'Message is too long (max 2000 characters)';
 
   // Chat room types
   static const String privateRoomType = 'private';
@@ -124,12 +147,12 @@ class AppConstants {
     const suffixes = ['B', 'KB', 'MB', 'GB'];
     int i = 0;
     double size = bytes.toDouble();
-    
+
     while (size >= 1024 && i < suffixes.length - 1) {
       size /= 1024;
       i++;
     }
-    
+
     return '${size.toStringAsFixed(size < 10 ? 1 : 0)} ${suffixes[i]}';
   }
 
@@ -144,19 +167,22 @@ class AppConstants {
 
   // Asset paths
   static const String logoPath = 'assets/images/logo.png';
-  static const String avatarPlaceholderPath = 'assets/images/avatar_placeholder.png';
+  static const String avatarPlaceholderPath =
+      'assets/images/avatar_placeholder.png';
   static const String chatBackgroundPath = 'assets/images/chat_background.png';
 
   // Icon paths
   static const String appIconPath = 'assets/icons/app_icon.png';
-  static const String notificationIconPath = 'assets/icons/notification_icon.png';
+  static const String notificationIconPath =
+      'assets/icons/notification_icon.png';
 
   // Regular expressions
   // Updated to match backend: allows modern TLDs and plus-addressing (user+tag@domain.com)
   static final RegExp emailRegex = RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]+$');
   static final RegExp usernameRegex = RegExp(r'^[a-zA-Z0-9_-]{3,30}$');
   static final RegExp phoneRegex = RegExp(r'^\+?[1-9]\d{1,14}$');
-  static final RegExp urlRegex = RegExp(r'https?://(?:[-\w.])+(?:\:[0-9]+)?(?:/(?:[\w/_.])*(?:\?(?:[\w&=%.])*)?(?:\#(?:[\w.])*)?)?');
+  static final RegExp urlRegex = RegExp(
+      r'https?://(?:[-\w.])+(?:\:[0-9]+)?(?:/(?:[\w/_.])*(?:\?(?:[\w&=%.])*)?(?:\#(?:[\w.])*)?)?');
 
   // Date formats
   static const String dateFormat = 'MMM dd, yyyy';
@@ -196,8 +222,9 @@ class StorageKeys {
   static const String cachedChatRooms = 'cached_chat_rooms';
   static const String firstLaunch = 'first_launch';
   static const String appLaunchCount = 'app_launch_count';
-  
-  static String cachedMessages(String chatRoomId) => 'cached_messages_$chatRoomId';
+
+  static String cachedMessages(String chatRoomId) =>
+      'cached_messages_$chatRoomId';
   static String draftMessage(String chatRoomId) => 'draft_$chatRoomId';
 }
 
@@ -243,15 +270,18 @@ class ApiEndpoints {
 
   // Chat rooms
   static const String chatrooms = '/chatrooms';
-  
+
   static String getChatRoom(String roomId) => '/chatrooms/$roomId';
   static String joinChatRoom(String roomId) => '/chatrooms/$roomId/join';
   static String leaveChatRoom(String roomId) => '/chatrooms/$roomId/leave';
   static String getChatMessages(String roomId) => '/chatrooms/$roomId/messages';
   static String sendMessage(String roomId) => '/chatrooms/$roomId/messages';
   static String markAsRead(String roomId) => '/chatrooms/$roomId/read';
-  static String getUnreadCount(String roomId) => '/chatrooms/$roomId/unread-count';
-  static String editMessage(String messageId) => '/chatrooms/messages/$messageId';
-  static String deleteMessage(String messageId) => '/chatrooms/messages/$messageId';
+  static String getUnreadCount(String roomId) =>
+      '/chatrooms/$roomId/unread-count';
+  static String editMessage(String messageId) =>
+      '/chatrooms/messages/$messageId';
+  static String deleteMessage(String messageId) =>
+      '/chatrooms/messages/$messageId';
   static String getUserById(String userId) => '/users/$userId';
 }

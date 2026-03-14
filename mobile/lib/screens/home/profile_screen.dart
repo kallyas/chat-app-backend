@@ -12,7 +12,7 @@ class ProfileScreen extends StatelessWidget {
     return Consumer2<AuthProvider, ThemeProvider>(
       builder: (context, authProvider, themeProvider, child) {
         final user = authProvider.currentUser;
-        
+
         return Scaffold(
           appBar: AppBar(
             title: const Text('Profile'),
@@ -40,9 +40,10 @@ class ProfileScreen extends StatelessWidget {
                             CircleAvatar(
                               radius: 60,
                               backgroundColor: AppConstants.primaryBlue,
-                              backgroundImage: user.profilePic?.isNotEmpty == true
-                                  ? NetworkImage(user.profilePic!)
-                                  : null,
+                              backgroundImage:
+                                  user.profilePic?.isNotEmpty == true
+                                      ? NetworkImage(user.profilePic!)
+                                      : null,
                               child: user.profilePic?.isEmpty != false
                                   ? Text(
                                       user.initials,
@@ -77,13 +78,14 @@ class ProfileScreen extends StatelessWidget {
                           ],
                         ),
                       ),
-                      
+
                       const SizedBox(height: AppConstants.largePadding),
-                      
+
                       // User details
                       Card(
                         child: Padding(
-                          padding: const EdgeInsets.all(AppConstants.defaultPadding),
+                          padding:
+                              const EdgeInsets.all(AppConstants.defaultPadding),
                           child: Column(
                             children: [
                               _buildProfileItem(
@@ -112,17 +114,17 @@ class ProfileScreen extends StatelessWidget {
                                 user.isOnline ? 'Online' : 'Offline',
                                 Icons.circle,
                                 themeProvider,
-                                statusColor: user.isOnline 
-                                    ? themeProvider.onlineColor 
+                                statusColor: user.isOnline
+                                    ? themeProvider.onlineColor
                                     : themeProvider.offlineColor,
                               ),
                             ],
                           ),
                         ),
                       ),
-                      
+
                       const SizedBox(height: AppConstants.largePadding),
-                      
+
                       // Action buttons
                       Card(
                         child: Column(
@@ -165,22 +167,23 @@ class ProfileScreen extends StatelessWidget {
                           ],
                         ),
                       ),
-                      
+
                       const SizedBox(height: AppConstants.largePadding),
-                      
+
                       // Logout button
                       SizedBox(
                         width: double.infinity,
                         child: ElevatedButton(
-                          onPressed: authProvider.isLoading 
-                              ? null 
+                          onPressed: authProvider.isLoading
+                              ? null
                               : () => _showLogoutDialog(context, authProvider),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: AppConstants.errorRed,
                             foregroundColor: Colors.white,
                             padding: const EdgeInsets.symmetric(vertical: 16),
                             shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(AppConstants.defaultBorderRadius),
+                              borderRadius: BorderRadius.circular(
+                                  AppConstants.defaultBorderRadius),
                             ),
                           ),
                           child: authProvider.isLoading
@@ -189,7 +192,8 @@ class ProfileScreen extends StatelessWidget {
                                   width: 20,
                                   child: CircularProgressIndicator(
                                     strokeWidth: 2,
-                                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                    valueColor: AlwaysStoppedAnimation<Color>(
+                                        Colors.white),
                                   ),
                                 )
                               : const Text(
@@ -201,9 +205,9 @@ class ProfileScreen extends StatelessWidget {
                                 ),
                         ),
                       ),
-                      
+
                       const SizedBox(height: AppConstants.largePadding),
-                      
+
                       // App version
                       Text(
                         'Version ${AppConstants.appVersion}',
@@ -266,7 +270,7 @@ class ProfileScreen extends StatelessWidget {
   String _formatDate(DateTime date) {
     final now = DateTime.now();
     final difference = now.difference(date).inDays;
-    
+
     if (difference < 30) {
       return '$difference days ago';
     } else if (difference < 365) {

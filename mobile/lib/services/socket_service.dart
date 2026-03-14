@@ -1,5 +1,7 @@
-import 'package:socket_io_client/socket_io_client.dart' as IO;
+import 'package:socket_io_client/socket_io_client.dart' as socket_io;
+import 'dart:async';
 import '../config/socket_config.dart';
+import '../models/api_response.dart';
 import 'storage_service.dart';
 
 class SocketService {
@@ -7,17 +9,13 @@ class SocketService {
   factory SocketService() => _instance;
   SocketService._internal();
 
-  IO.Socket? _socket;
+  socket_io.Socket? _socket;
   bool _isConnected = false;
   String? _currentUserId;
 
   // Typing indicator throttling (max 10 per minute = 1 per 6 seconds)
   DateTime? _lastTypingEvent;
-  static const Duration _typingThrottle = Duration(seconds: 6);
-
-  // Rate limiting tracking
-  final Map<String, int> _eventCounts = {};
-  final Map<String, DateTime> _eventTimestamps = {};
+  static const Duration _typingThrottle = Duration(seconds: 1);
 
   // Event callbacks
   Function(Map<String, dynamic>)? onNewMessage;
@@ -37,7 +35,7 @@ class SocketService {
     try {
       final token = await StorageService.getAuthToken();
       final userId = await StorageService.getUserId();
-      
+
       if (token == null || userId == null) {
         throw Exception('No authentication token or user ID found');
       }
@@ -47,7 +45,7 @@ class SocketService {
 
       _setupEventListeners();
       _socket!.connect();
-      
+
       print('🔌 Connecting to socket...');
     } catch (e) {
       print('❌ Socket connection error: $e');
@@ -145,7 +143,8 @@ class SocketService {
       final errorMessage = data.toString().toLowerCase();
       if (errorMessage.contains('rate limit')) {
         print('⚠️ Rate limit exceeded');
-        onError?.call('You\'re sending messages too quickly. Please slow down.');
+        onError
+            ?.call('You\'re sending messages too quickly. Please slow down.');
       } else if (errorMessage.contains('room not found') ||
           errorMessage.contains('access denied')) {
         onError?.call('Room access denied or not found');
@@ -182,16 +181,19 @@ class SocketService {
   }
 
   // Send a message
-  void sendMessage({
+  Future<ApiResponse<Map<String, dynamic>>> sendMessage({
     required String roomId,
     required String content,
     required String type,
     String? replyTo,
     Map<String, dynamic>? metadata,
-  }) {
+  }) async {
     if (_socket == null || !_isConnected) {
       print('❌ Socket not connected, cannot send message');
-      return;
+      return ApiResponse.error(
+        message: 'Socket not connected',
+        code: 'SOCKET_DISCONNECTED',
+      );
     }
 
     final messageData = {
@@ -202,8 +204,40 @@ class SocketService {
       if (metadata != null) 'metadata': metadata,
     };
 
-    _socket!.emit(SocketConfig.sendMessage, messageData);
     print('📤 Sending message: $messageData');
+
+    try {
+      final completer = Completer<dynamic>();
+
+      _socket!.emitWithAck(
+        SocketConfig.sendMessage,
+        messageData,
+        ack: (dynamic ack) {
+          if (!completer.isCompleted) {
+            completer.complete(ack);
+          }
+        },
+      );
+
+      final ack = await completer.future.timeout(const Duration(seconds: 10));
+
+      if (ack is Map<String, dynamic>) {
+        return ApiResponse.fromJson(
+          ack,
+          (json) => json as Map<String, dynamic>,
+        );
+      }
+
+      return ApiResponse.error(
+        message: 'Unexpected socket response',
+        code: 'INVALID_SOCKET_ACK',
+      );
+    } catch (e) {
+      return ApiResponse.error(
+        message: 'Failed to send message: $e',
+        code: 'SOCKET_SEND_ERROR',
+      );
+    }
   }
 
   // Send typing indicator (throttled to max 10/min = 1 per 6 seconds)
@@ -229,6 +263,7 @@ class SocketService {
   void stopTyping(String roomId) {
     if (_socket == null || !_isConnected) return;
 
+    _lastTypingEvent = null;
     _socket!.emit(SocketConfig.stopTyping, {
       'roomId': roomId,
     });
@@ -261,7 +296,7 @@ class SocketService {
     if (_isConnected) return;
 
     disconnect();
-    
+
     int attempts = 0;
     const maxAttempts = SocketConfig.maxReconnectAttempts;
 

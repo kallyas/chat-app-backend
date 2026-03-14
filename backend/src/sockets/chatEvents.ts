@@ -5,6 +5,7 @@ import { logger } from '@/config/logger';
 import { sendMessageSchema, objectIdSchema } from '@/utils';
 import { User, ChatRoom, MessageType } from '@/models';
 import { socketRateLimiter, SOCKET_RATE_LIMITS } from '@/utils/socketRateLimit';
+import type { SendMessageData } from '@/types';
 
 export interface TypingData {
   roomId: string;
@@ -20,7 +21,7 @@ export interface SocketSendMessageData {
   content: string;
   type?: 'text' | 'image' | 'file';
   replyTo?: string;
-  metadata?: any;
+  metadata?: SendMessageData['metadata'];
 }
 
 export interface MessageReadData {
@@ -139,7 +140,12 @@ export const setupChatEvents = (io: Server, socket: AuthenticatedSocket) => {
   });
 
   // Send a message
-  socket.on('sendMessage', async (data: SocketSendMessageData) => {
+  socket.on(
+    'sendMessage',
+    async (
+      data: SocketSendMessageData,
+      acknowledge?: (payload: Record<string, unknown>) => void
+    ) => {
     try {
       // Rate limit check
       if (
@@ -161,6 +167,10 @@ export const setupChatEvents = (io: Server, socket: AuthenticatedSocket) => {
       // Validate room ID format
       const roomValidation = objectIdSchema.validate(roomId);
       if (roomValidation.error) {
+        acknowledge?.({
+          success: false,
+          message: 'Invalid room ID format',
+        });
         socket.emit('error', { message: 'Invalid room ID format' });
         return;
       }
@@ -171,11 +181,15 @@ export const setupChatEvents = (io: Server, socket: AuthenticatedSocket) => {
         value: Omit<SocketSendMessageData, 'roomId'>;
       };
       if (validation.error) {
+        acknowledge?.({
+          success: false,
+          message: validation.error.details[0].message,
+        });
         socket.emit('error', { message: validation.error.details[0].message });
         return;
       }
 
-      const messageData = {
+      const messageData: SendMessageData = {
         ...validation.value,
         type: validation.value.type
           ? (validation.value.type as MessageType)
@@ -192,12 +206,32 @@ export const setupChatEvents = (io: Server, socket: AuthenticatedSocket) => {
         timestamp: new Date(),
       });
 
+      socket.to(roomId).emit('userTyping', {
+        roomId,
+        userId: socket.userId,
+        username: socket.username,
+        isTyping: false,
+        timestamp: new Date(),
+      });
+
+      acknowledge?.({
+        success: true,
+        data: {
+          message,
+        },
+      });
+
       logger.info(`Message sent by ${socket.username} in room ${roomId}`);
     } catch (error) {
       logger.error('Error in sendMessage event:', error);
+      acknowledge?.({
+        success: false,
+        message: 'Failed to send message',
+      });
       socket.emit('error', { message: 'Failed to send message' });
     }
-  });
+    }
+  );
 
   // Handle typing indicators
   socket.on('typing', async (data: TypingData) => {
@@ -244,6 +278,7 @@ export const setupChatEvents = (io: Server, socket: AuthenticatedSocket) => {
 
       // Emit typing status to all users in the room except sender
       socket.to(roomId).emit('userTyping', {
+        roomId,
         userId: socket.userId,
         username: socket.username,
         isTyping,
@@ -275,6 +310,7 @@ export const setupChatEvents = (io: Server, socket: AuthenticatedSocket) => {
       const { roomId } = data;
 
       socket.to(roomId).emit('userTyping', {
+        roomId,
         userId: socket.userId,
         username: socket.username,
         isTyping: false,

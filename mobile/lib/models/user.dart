@@ -1,5 +1,3 @@
-import 'package:flutter/material.dart';
-
 class User {
   final String id;
   final String username;
@@ -28,13 +26,13 @@ class User {
       email: json['email']?.toString() ?? '',
       profilePic: json['profilePic']?.toString(),
       isOnline: json['isOnline'] ?? false,
-      lastSeen: json['lastSeen'] != null 
-          ? DateTime.tryParse(json['lastSeen'].toString()) 
+      lastSeen: json['lastSeen'] != null
+          ? DateTime.tryParse(json['lastSeen'].toString())
           : null,
-      createdAt: json['createdAt'] != null 
+      createdAt: json['createdAt'] != null
           ? DateTime.tryParse(json['createdAt'].toString()) ?? DateTime.now()
           : DateTime.now(),
-      updatedAt: json['updatedAt'] != null 
+      updatedAt: json['updatedAt'] != null
           ? DateTime.tryParse(json['updatedAt'].toString()) ?? DateTime.now()
           : DateTime.now(),
     );
@@ -91,20 +89,20 @@ class User {
 
   // Helper methods
   String get displayName => username;
-  
+
   String get avatarUrl => profilePic ?? '';
-  
+
   String get initials {
     final words = username.split(' ');
     if (words.length >= 2) {
       return '${words[0][0]}${words[1][0]}'.toUpperCase();
     } else {
-      return username.length >= 2 
+      return username.length >= 2
           ? username.substring(0, 2).toUpperCase()
           : username.toUpperCase();
     }
   }
-  
+
   String get onlineStatusText {
     if (isOnline) return 'Online';
     if (lastSeen != null) {

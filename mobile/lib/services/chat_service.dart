@@ -327,7 +327,8 @@ class ChatService {
     } catch (e) {
       // Handle specific error for time limit exceeded
       final errorMessage = e.toString();
-      if (errorMessage.contains('24 hours') || errorMessage.contains('too old to edit')) {
+      if (errorMessage.contains('24 hours') ||
+          errorMessage.contains('too old to edit')) {
         return ApiResponse.error(
           message: 'Messages can only be edited within 24 hours',
           code: 'EDIT_TIME_LIMIT_EXCEEDED',
@@ -350,7 +351,8 @@ class ChatService {
     } catch (e) {
       // Handle specific error for time limit exceeded
       final errorMessage = e.toString();
-      if (errorMessage.contains('168 hours') || errorMessage.contains('too old to delete')) {
+      if (errorMessage.contains('168 hours') ||
+          errorMessage.contains('too old to delete')) {
         return ApiResponse.error(
           message: 'Messages can only be deleted within 168 hours (7 days)',
           code: 'DELETE_TIME_LIMIT_EXCEEDED',

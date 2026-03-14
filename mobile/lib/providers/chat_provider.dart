@@ -22,23 +22,26 @@ class ChatProvider extends ChangeNotifier {
   ChatState _state = ChatState.initial;
   String? _errorMessage;
   bool _isLoading = false;
+  bool _isInitialized = false;
+  bool _socketCallbacksBound = false;
 
   // Chat data
   List<ChatRoom> _chatRooms = [];
   Map<String, List<Message>> _messages = {};
   Map<String, bool> _isLoadingMessages = {};
   Map<String, bool> _hasMoreMessages = {};
-  Map<String, List<String>> _typingUsers = {};
-  
+  Map<String, Map<String, String>> _typingUsers = {};
+  final Map<String, Timer> _typingTimeouts = {};
+
   // Chat rooms pagination
   bool _isLoadingChatRooms = false;
   bool _hasMoreChatRooms = true;
   int _currentChatRoomsPage = 1;
-  
+
   // Current chat
   String? _currentChatRoomId;
   ChatRoom? _currentChatRoom;
-  
+
   // Users data
   List<User> _onlineUsers = [];
   Map<String, User> _users = {};
@@ -67,7 +70,7 @@ class ChatProvider extends ChangeNotifier {
   }
 
   List<String> getTypingUsers(String chatRoomId) {
-    return _typingUsers[chatRoomId] ?? [];
+    return _typingUsers[chatRoomId]?.values.toList() ?? [];
   }
 
   User? getUser(String userId) {
@@ -76,8 +79,11 @@ class ChatProvider extends ChangeNotifier {
 
   // Initialize chat provider
   Future<void> initialize() async {
+    if (_isLoading) return;
+    if (_isInitialized && _socketService.isConnected) return;
+
     _setLoading(true);
-    
+
     try {
       // Only initialize if we have valid auth tokens
       final hasTokens = await _hasValidAuth();
@@ -85,19 +91,23 @@ class ChatProvider extends ChangeNotifier {
         _setError('Authentication required');
         return;
       }
-      
+
       // Setup socket listeners
-      _setupSocketListeners();
-      
+      if (!_socketCallbacksBound) {
+        _setupSocketListeners();
+        _socketCallbacksBound = true;
+      }
+
       // Connect to socket
       await _socketService.connect();
-      
+
       // Load initial data
       await Future.wait([
         loadChatRooms(),
         loadOnlineUsers(),
       ]);
-      
+
+      _isInitialized = true;
       _setState(ChatState.loaded);
     } catch (e) {
       _setError('Failed to initialize chat: $e');
@@ -127,12 +137,13 @@ class ChatProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final page = refresh ? 1 : (_chatRooms.isEmpty ? 1 : _currentChatRoomsPage + 1);
+      final page =
+          refresh ? 1 : (_chatRooms.isEmpty ? 1 : _currentChatRoomsPage + 1);
       final response = await _chatService.getUserChatRooms(page: page);
-      
+
       if (response.success && response.data != null) {
         final newRooms = response.data!.items;
-        
+
         if (refresh) {
           _chatRooms = newRooms;
           _currentChatRoomsPage = 1;
@@ -143,16 +154,16 @@ class ChatProvider extends ChangeNotifier {
           _chatRooms.addAll(newRooms);
           _currentChatRoomsPage++;
         }
-        
+
         _hasMoreChatRooms = response.data!.pagination.hasNext;
-        
+
         // Cache users from chat rooms
         for (final room in _chatRooms) {
           for (final user in room.participants) {
             _users[user.id] = user;
           }
         }
-        
+
         notifyListeners();
       } else {
         _setError(response.message);
@@ -168,36 +179,37 @@ class ChatProvider extends ChangeNotifier {
   // Load more chat rooms (for infinite scroll)
   Future<void> loadMoreChatRooms() async {
     if (_isLoadingChatRooms || !_hasMoreChatRooms) return;
-    
+
     await loadChatRooms();
   }
 
   // Load messages for a chat room
   Future<void> loadMessages(String chatRoomId, {bool refresh = false}) async {
     if (_isLoadingMessages[chatRoomId] == true) return;
-    
+
     _isLoadingMessages[chatRoomId] = true;
     notifyListeners();
 
     try {
       final response = await _chatService.getMessages(roomId: chatRoomId);
-      
+
       if (response.success && response.data != null) {
         if (refresh) {
           _messages[chatRoomId] = response.data!.items.reversed.toList();
         } else {
-          _messages[chatRoomId] = (_messages[chatRoomId] ?? []) + response.data!.items.reversed.toList();
+          _messages[chatRoomId] = (_messages[chatRoomId] ?? []) +
+              response.data!.items.reversed.toList();
         }
-        
+
         _hasMoreMessages[chatRoomId] = response.data!.pagination.hasNext;
-        
+
         // Cache users from messages
         for (final message in response.data!.items) {
           if (message.sender != null) {
             _users[message.sender!.id] = message.sender!;
           }
         }
-        
+
         notifyListeners();
       } else {
         _setError(response.message);
@@ -212,7 +224,8 @@ class ChatProvider extends ChangeNotifier {
 
   // Load more messages (for infinite scroll)
   Future<void> loadMoreMessages(String chatRoomId) async {
-    if (_isLoadingMessages[chatRoomId] == true || _hasMoreMessages[chatRoomId] == false) {
+    if (_isLoadingMessages[chatRoomId] == true ||
+        _hasMoreMessages[chatRoomId] == false) {
       return;
     }
 
@@ -220,18 +233,19 @@ class ChatProvider extends ChangeNotifier {
     if (currentMessages.isEmpty) return;
 
     final oldestMessage = currentMessages.first;
-    
+
     try {
       final response = await _chatService.loadMoreMessages(
         roomId: chatRoomId,
         beforeMessageId: oldestMessage.id,
       );
-      
+
       if (response.success && response.data != null) {
         final newMessages = response.data!.reversed.toList();
         _messages[chatRoomId] = newMessages + currentMessages;
-        _hasMoreMessages[chatRoomId] = newMessages.length == 20; // Assuming page size is 20
-        
+        _hasMoreMessages[chatRoomId] =
+            newMessages.length == 20; // Assuming page size is 20
+
         notifyListeners();
       }
     } catch (e) {
@@ -248,17 +262,7 @@ class ChatProvider extends ChangeNotifier {
     Map<String, dynamic>? metadata,
   }) async {
     try {
-      // Send via socket for real-time delivery
-      _socketService.sendMessage(
-        roomId: chatRoomId,
-        content: content,
-        type: type,
-        replyTo: replyToId,
-        metadata: metadata,
-      );
-
-      // Also send via API for persistence
-      final response = await _chatService.sendMessage(
+      final response = await _socketService.sendMessage(
         roomId: chatRoomId,
         content: content,
         type: type,
@@ -267,12 +271,15 @@ class ChatProvider extends ChangeNotifier {
       );
 
       if (response.success) {
-        // Message will be added via socket event
+        final messagePayload = response.data?['message'];
+        if (messagePayload is Map<String, dynamic>) {
+          _handleNewMessage({'message': messagePayload});
+        }
         return true;
-      } else {
-        _setError(response.message);
-        return false;
       }
+
+      _setError(response.message);
+      return false;
     } catch (e) {
       _setError('Failed to send message: $e');
       return false;
@@ -283,7 +290,7 @@ class ChatProvider extends ChangeNotifier {
   Future<ChatRoom?> createPrivateChat(String otherUserId) async {
     try {
       final response = await _chatService.createPrivateChat(otherUserId);
-      
+
       if (response.success && response.data != null) {
         final newRoom = response.data!;
         _chatRooms.insert(0, newRoom);
@@ -311,7 +318,7 @@ class ChatProvider extends ChangeNotifier {
         participants: participants,
         description: description,
       );
-      
+
       if (response.success && response.data != null) {
         final newRoom = response.data!;
         _chatRooms.insert(0, newRoom);
@@ -334,20 +341,18 @@ class ChatProvider extends ChangeNotifier {
       if (_currentChatRoomId != null) {
         _socketService.leaveRoom(_currentChatRoomId!);
       }
-      
+
       _currentChatRoomId = chatRoomId;
-      _currentChatRoom = _chatRooms.firstWhere(
-        (room) => room.id == chatRoomId,
-        orElse: () => _currentChatRoom!,
-      );
-      
+      _currentChatRoom =
+          chatRoomId == null ? null : _findChatRoomById(chatRoomId);
+
       // Join new room
-      if (chatRoomId != null) {
+      if (chatRoomId != null && _currentChatRoom != null) {
         _socketService.joinRoom(chatRoomId);
         loadMessages(chatRoomId, refresh: true);
         markMessagesAsRead(chatRoomId);
       }
-      
+
       notifyListeners();
     }
   }
@@ -356,7 +361,7 @@ class ChatProvider extends ChangeNotifier {
   Future<void> markMessagesAsRead(String chatRoomId) async {
     try {
       await _chatService.markMessagesAsRead(chatRoomId);
-      
+
       // Update local chat room unread count
       final roomIndex = _chatRooms.indexWhere((room) => room.id == chatRoomId);
       if (roomIndex != -1) {
@@ -385,15 +390,15 @@ class ChatProvider extends ChangeNotifier {
     try {
       final response = await _chatService.searchUsers(query: query);
       debugPrint('Search users response: $response');
-      
+
       if (response.success && response.data != null) {
         final users = response.data!.items;
-        
+
         // Cache users
         for (final user in users) {
           _users[user.id] = user;
         }
-        
+
         return users;
       } else {
         _setError(response.message);
@@ -409,15 +414,15 @@ class ChatProvider extends ChangeNotifier {
   Future<void> loadOnlineUsers() async {
     try {
       final response = await _chatService.getOnlineUsers();
-      
+
       if (response.success && response.data != null) {
         _onlineUsers = response.data!.items;
-        
+
         // Cache users
         for (final user in _onlineUsers) {
           _users[user.id] = user;
         }
-        
+
         notifyListeners();
       }
     } catch (e) {
@@ -430,10 +435,20 @@ class ChatProvider extends ChangeNotifier {
     try {
       final message = Message.fromJson(data['message']);
       final chatRoomId = message.chatRoomId;
-      
-      // Add message to list
-      _messages[chatRoomId] = (_messages[chatRoomId] ?? [])..add(message);
-      
+
+      final messages = List<Message>.from(_messages[chatRoomId] ?? []);
+      final existingIndex =
+          messages.indexWhere((item) => item.id == message.id);
+
+      if (existingIndex == -1) {
+        messages.add(message);
+      } else {
+        messages[existingIndex] = message;
+      }
+
+      messages.sort((a, b) => a.createdAt.compareTo(b.createdAt));
+      _messages[chatRoomId] = messages;
+
       // Update chat room last message and move to top
       final roomIndex = _chatRooms.indexWhere((room) => room.id == chatRoomId);
       if (roomIndex != -1) {
@@ -441,18 +456,20 @@ class ChatProvider extends ChangeNotifier {
         final updatedRoom = room.copyWith(
           lastMessage: message,
           updatedAt: message.createdAt,
-          unreadCount: chatRoomId != _currentChatRoomId ? room.unreadCount + 1 : 0,
+          unreadCount:
+              chatRoomId != _currentChatRoomId ? room.unreadCount + 1 : 0,
         );
-        
+
         _chatRooms.removeAt(roomIndex);
         _chatRooms.insert(0, updatedRoom);
       }
-      
+
       // Auto-mark as read if in current chat
       if (chatRoomId == _currentChatRoomId) {
+        _removeTypingUser(chatRoomId, message.senderId);
         markMessagesAsRead(chatRoomId);
       }
-      
+
       notifyListeners();
     } catch (e) {
       print('Error handling new message: $e');
@@ -471,20 +488,24 @@ class ChatProvider extends ChangeNotifier {
 
   void _handleUserTyping(Map<String, dynamic> data) {
     try {
-      final userId = data['userId'];
+      final userId = data['userId']?.toString();
       final chatRoomId = data['roomId'] ?? _currentChatRoomId;
       final isTyping = data['isTyping'] ?? false;
-      
-      if (chatRoomId != null) {
-        final typingList = _typingUsers[chatRoomId] ?? [];
-        
-        if (isTyping && !typingList.contains(userId)) {
-          typingList.add(userId);
+
+      if (chatRoomId != null && userId != null) {
+        final typingMap =
+            Map<String, String>.from(_typingUsers[chatRoomId] ?? {});
+        final username = data['username']?.toString() ?? 'Someone';
+
+        if (isTyping) {
+          typingMap[userId] = username;
+          _scheduleTypingExpiry(chatRoomId, userId);
         } else if (!isTyping) {
-          typingList.remove(userId);
+          _removeTypingUser(chatRoomId, userId);
+          return;
         }
-        
-        _typingUsers[chatRoomId] = typingList;
+
+        _typingUsers[chatRoomId] = typingMap;
         notifyListeners();
       }
     } catch (e) {
@@ -501,7 +522,7 @@ class ChatProvider extends ChangeNotifier {
     try {
       final userId = data['userId'];
       final status = data['status'];
-      
+
       if (_users.containsKey(userId)) {
         final user = _users[userId]!;
         _users[userId] = user.copyWith(
@@ -540,7 +561,7 @@ class ChatProvider extends ChangeNotifier {
         messageId: messageId,
         content: newContent,
       );
-      
+
       if (response.success) {
         // Update local message
         for (final messages in _messages.values) {
@@ -570,11 +591,24 @@ class ChatProvider extends ChangeNotifier {
   Future<bool> deleteMessage(String messageId) async {
     try {
       final response = await _chatService.deleteMessage(messageId);
-      
+
       if (response.success) {
-        // Remove from local messages
+        // Keep the bubble in place so the thread does not jump after deletion.
         for (final messages in _messages.values) {
-          messages.removeWhere((msg) => msg.id == messageId);
+          final index = messages.indexWhere((msg) => msg.id == messageId);
+          if (index != -1) {
+            messages[index] = messages[index].copyWith(
+              content: 'Message deleted',
+              metadata: null,
+              replyTo: null,
+              replyToId: null,
+              isDeleted: true,
+              edited: false,
+              editedAt: null,
+              updatedAt: DateTime.now(),
+            );
+            break;
+          }
         }
         notifyListeners();
         return true;
@@ -632,6 +666,10 @@ class ChatProvider extends ChangeNotifier {
     _isLoadingMessages.clear();
     _hasMoreMessages.clear();
     _typingUsers.clear();
+    for (final timer in _typingTimeouts.values) {
+      timer.cancel();
+    }
+    _typingTimeouts.clear();
     _currentChatRoomId = null;
     _currentChatRoom = null;
     _onlineUsers.clear();
@@ -639,11 +677,40 @@ class ChatProvider extends ChangeNotifier {
     _isLoadingChatRooms = false;
     _hasMoreChatRooms = true;
     _currentChatRoomsPage = 1;
+    _isInitialized = false;
     _setState(ChatState.initial);
   }
 
   // Check if we have valid authentication
   Future<bool> _hasValidAuth() async {
     return await StorageService.hasAuthTokens();
+  }
+
+  ChatRoom? _findChatRoomById(String chatRoomId) {
+    for (final room in _chatRooms) {
+      if (room.id == chatRoomId) {
+        return room;
+      }
+    }
+    return null;
+  }
+
+  void _scheduleTypingExpiry(String chatRoomId, String userId) {
+    final key = '$chatRoomId:$userId';
+    _typingTimeouts[key]?.cancel();
+    _typingTimeouts[key] = Timer(const Duration(seconds: 4), () {
+      _removeTypingUser(chatRoomId, userId);
+    });
+  }
+
+  void _removeTypingUser(String chatRoomId, String userId) {
+    final key = '$chatRoomId:$userId';
+    _typingTimeouts.remove(key)?.cancel();
+
+    final typingMap = Map<String, String>.from(_typingUsers[chatRoomId] ?? {});
+    if (typingMap.remove(userId) != null) {
+      _typingUsers[chatRoomId] = typingMap;
+      notifyListeners();
+    }
   }
 }

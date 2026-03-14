@@ -2,13 +2,20 @@ import { Server } from 'socket.io';
 import { Server as HttpServer } from 'http';
 import { authenticateSocket, AuthenticatedSocket } from './socketAuth';
 import { setupChatEvents } from './chatEvents';
-import { config } from '@/config/environment';
+import { config, isAllowedCorsOrigin } from '@/config/environment';
 import { logger } from '@/config/logger';
 
 export const setupSocketIO = (httpServer: HttpServer): Server => {
   const io = new Server(httpServer, {
     cors: {
-      origin: config.cors.origins,
+      origin(origin, callback) {
+        if (isAllowedCorsOrigin(origin)) {
+          callback(null, true);
+          return;
+        }
+
+        callback(new Error(`CORS origin not allowed: ${origin}`));
+      },
       methods: ['GET', 'POST'],
       credentials: true,
     },

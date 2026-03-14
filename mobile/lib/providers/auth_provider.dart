@@ -23,15 +23,16 @@ class AuthProvider extends ChangeNotifier {
   User? get currentUser => _currentUser;
   String? get errorMessage => _errorMessage;
   bool get isLoading => _isLoading;
-  bool get isAuthenticated => _state == AuthState.authenticated && _currentUser != null;
+  bool get isAuthenticated =>
+      _state == AuthState.authenticated && _currentUser != null;
 
   // Initialize and check auth state
   Future<void> checkAuthState() async {
     _setLoading(true);
-    
+
     try {
       final isValid = await _authService.validateAuthState();
-      
+
       if (isValid) {
         final userResponse = await _authService.getCurrentUser();
         if (userResponse.success && userResponse.data != null) {

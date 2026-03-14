@@ -11,13 +11,13 @@ import 'services/api_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
+
   // Initialize storage service
   await StorageService.init();
-  
+
   // Initialize API service
   ApiService().initialize();
-  
+
   runApp(const ChatApp());
 }
 
@@ -76,22 +76,88 @@ class _AppWrapperState extends State<AppWrapper> {
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<AuthProvider>(
-      builder: (context, authProvider, child) {
+    return Consumer2<AuthProvider, ThemeProvider>(
+      builder: (context, authProvider, themeProvider, child) {
         if (authProvider.isLoading) {
-          return const Scaffold(
-            body: Center(
-              child: CircularProgressIndicator(),
-            ),
-          );
+          return _LaunchScreen(themeProvider: themeProvider);
         }
 
         if (authProvider.isAuthenticated) {
           return const HomeScreen();
-        } else {
-          return const LoginScreen();
         }
+
+        return const LoginScreen();
       },
+    );
+  }
+}
+
+class _LaunchScreen extends StatelessWidget {
+  const _LaunchScreen({required this.themeProvider});
+
+  final ThemeProvider themeProvider;
+
+  @override
+  Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+
+    return Scaffold(
+      body: DecoratedBox(
+        decoration: BoxDecoration(gradient: themeProvider.shellGradient),
+        child: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 24),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Spacer(),
+                Container(
+                  width: 84,
+                  height: 84,
+                  decoration: BoxDecoration(
+                    gradient: themeProvider.heroGradient,
+                    borderRadius: BorderRadius.circular(28),
+                    boxShadow: [
+                      BoxShadow(
+                        color: themeProvider.shadowColor,
+                        blurRadius: 24,
+                        offset: const Offset(0, 14),
+                      ),
+                    ],
+                  ),
+                  child: const Icon(
+                    Icons.forum_rounded,
+                    color: Colors.white,
+                    size: 38,
+                  ),
+                ),
+                const SizedBox(height: 24),
+                Text('Preparing your workspace',
+                    style: textTheme.headlineMedium),
+                const SizedBox(height: 10),
+                Text(
+                  'Restoring session state, message history, and live presence.',
+                  style: textTheme.bodyLarge?.copyWith(
+                    color: themeProvider.secondaryTextColor,
+                  ),
+                ),
+                const SizedBox(height: 28),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(999),
+                  child: LinearProgressIndicator(
+                    minHeight: 7,
+                    backgroundColor: themeProvider.surfaceVariantColor,
+                    valueColor: AlwaysStoppedAnimation<Color>(
+                      themeProvider.accentColor,
+                    ),
+                  ),
+                ),
+                const Spacer(),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 }

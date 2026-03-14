@@ -246,7 +246,8 @@ class _AuthInterceptor extends Interceptor {
       // Check if token has been invalidated (password change, etc.)
       if (responseData is Map<String, dynamic>) {
         final message = responseData['message']?.toString().toLowerCase() ?? '';
-        if (message.contains('invalidated') || message.contains('token has been')) {
+        if (message.contains('invalidated') ||
+            message.contains('token has been')) {
           // Token was invalidated, clear everything and don't retry
           await StorageService.clearAuthTokens();
           print('⚠️ Token invalidated by server - user must login again');
