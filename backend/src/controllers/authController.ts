@@ -11,7 +11,6 @@ import {
   loginSchema,
   resetPasswordSchema,
   logUserAction,
-  logSecurityEvent,
 } from '@/utils';
 import type { IUser } from '@/models';
 import type { RegisterUserData, LoginUserData, AuthRequest } from '@/types';

@@ -17,7 +17,9 @@ export const setupSocketIO = (httpServer: HttpServer): Server => {
   });
 
   // Authentication middleware
-  io.use(authenticateSocket);
+  io.use((socket, next) => {
+    void authenticateSocket(socket, next);
+  });
 
   // Handle connections
   io.on('connection', (socket: AuthenticatedSocket) => {
@@ -36,7 +38,7 @@ export const setupSocketIO = (httpServer: HttpServer): Server => {
 
     // Join user to their personal room for direct notifications
     if (socket.userId) {
-      socket.join(`user_${socket.userId}`);
+      void socket.join(`user_${socket.userId}`);
     }
   });
 

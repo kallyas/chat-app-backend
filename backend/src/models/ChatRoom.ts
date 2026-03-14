@@ -117,31 +117,33 @@ chatRoomSchema.pre('save', function (next) {
 chatRoomSchema.methods.addParticipant = function (
   userId: mongoose.Types.ObjectId
 ) {
-  if (this.type === ChatRoomType.PRIVATE) {
+  const chatRoom = this as IChatRoom;
+
+  if (chatRoom.type === ChatRoomType.PRIVATE) {
     throw new Error('Cannot add participants to private chat');
   }
 
-  if (
-    !this.participants.some((id: mongoose.Types.ObjectId) => id.equals(userId))
-  ) {
-    this.participants.push(userId);
+  if (!chatRoom.participants.some(id => id.equals(userId))) {
+    chatRoom.participants.push(userId);
   }
 
-  return this.save();
+  return chatRoom.save();
 };
 
 chatRoomSchema.methods.removeParticipant = function (
   userId: mongoose.Types.ObjectId
 ) {
-  this.participants = this.participants.filter(
-    (participantId: mongoose.Types.ObjectId) => !participantId.equals(userId)
-  ) as mongoose.Types.ObjectId[];
+  const chatRoom = this as IChatRoom;
 
-  if (this.participants.length === 0) {
-    this.isActive = false;
+  chatRoom.participants = chatRoom.participants.filter(
+    participantId => !participantId.equals(userId)
+  );
+
+  if (chatRoom.participants.length === 0) {
+    chatRoom.isActive = false;
   }
 
-  return this.save();
+  return chatRoom.save();
 };
 
 chatRoomSchema.methods.updateLastMessage = function (
@@ -149,14 +151,16 @@ chatRoomSchema.methods.updateLastMessage = function (
   senderId: mongoose.Types.ObjectId,
   messageType: 'text' | 'image' | 'file' = 'text'
 ) {
-  this.lastMessage = {
+  const chatRoom = this as IChatRoom;
+
+  chatRoom.lastMessage = {
     content,
     sender: senderId,
     timestamp: new Date(),
     messageType,
   };
 
-  return this.save();
+  return chatRoom.save();
 };
 
 chatRoomSchema.index({ participants: 1 });

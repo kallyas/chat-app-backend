@@ -119,31 +119,34 @@ const messageSchema = new Schema<IMessage>(
 );
 
 messageSchema.methods.markAsRead = function (userId: mongoose.Types.ObjectId) {
-  const existingRead = this.readBy.find(
+  const message = this as IMessage;
+  const existingRead = message.readBy.find(
     (read: { userId: mongoose.Types.ObjectId; readAt: Date }) =>
       read.userId.equals(userId)
   );
 
   if (!existingRead) {
-    this.readBy.push({
+    message.readBy.push({
       userId,
       readAt: new Date(),
-    } as { userId: mongoose.Types.ObjectId; readAt: Date });
+    });
   }
 
-  return this.save();
+  return message.save();
 };
 
 messageSchema.methods.markAsDelivered = function () {
-  this.status = MessageStatus.DELIVERED;
-  return this.save();
+  const message = this as IMessage;
+  message.status = MessageStatus.DELIVERED;
+  return message.save();
 };
 
 messageSchema.methods.editContent = function (newContent: string) {
-  this.content = newContent;
-  this.edited = true;
-  this.editedAt = new Date();
-  return this.save();
+  const message = this as IMessage;
+  message.content = newContent;
+  message.edited = true;
+  message.editedAt = new Date();
+  return message.save();
 };
 
 messageSchema.statics.getUnreadCount = function (

@@ -15,8 +15,15 @@ export const authenticateSocket = async (
   next: (err?: Error) => void
 ) => {
   try {
+    const auth = socket.handshake.auth as Record<string, unknown>;
+    const authToken = auth.token;
+    const headerToken = socket.handshake.headers.authorization;
     const token =
-      socket.handshake.auth.token || socket.handshake.headers.authorization;
+      typeof authToken === 'string'
+        ? authToken
+        : typeof headerToken === 'string'
+          ? headerToken
+          : undefined;
 
     if (!token) {
       return next(new Error('Authentication token required'));

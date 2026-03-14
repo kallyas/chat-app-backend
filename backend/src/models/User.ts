@@ -94,7 +94,11 @@ userSchema.methods.comparePassword = async function (
 };
 
 userSchema.methods.toJSON = function () {
-  const userObject = this.toObject() as Record<string, unknown>;
+  const userDocument = this as mongoose.HydratedDocument<IUser>;
+  const userObject = userDocument.toObject() as unknown as Record<
+    string,
+    unknown
+  >;
   delete userObject.password;
   delete userObject.resetPasswordToken;
   delete userObject.resetPasswordExpire;

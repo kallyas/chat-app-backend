@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import { AuthService } from '@/services';
 import { catchAsync, AppError } from '@/middleware';
-import { updateUserSchema, searchSchema } from '@/utils';
+import { updateUserSchema } from '@/utils';
 import type { AuthRequest } from '@/types';
 
 export const getProfile = catchAsync(

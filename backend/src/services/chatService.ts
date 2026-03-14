@@ -1,4 +1,3 @@
-import mongoose from 'mongoose';
 import {
   ChatRoom,
   IChatRoom,
@@ -7,7 +6,6 @@ import {
   IMessage,
   MessageType,
   User,
-  IUser,
 } from '@/models';
 import { AppError } from '@/middleware';
 import {
@@ -80,7 +78,9 @@ export class ChatService {
         );
         await chatRoom.populate('createdBy', 'username email profilePic');
 
-        logger.info(`New private chat room created: ${chatRoom._id}`);
+        logger.info(
+          `New private chat room created: ${chatRoom._id.toString()}`
+        );
         return chatRoom;
       }
 
@@ -100,7 +100,9 @@ export class ChatService {
       );
       await chatRoom.populate('createdBy', 'username email profilePic');
 
-      logger.info(`Chat room created: ${chatRoom._id} by ${createdBy}`);
+      logger.info(
+        `Chat room created: ${chatRoom._id.toString()} by ${createdBy}`
+      );
 
       return chatRoom;
     } catch (error) {
@@ -117,7 +119,7 @@ export class ChatService {
     page: any = 1,
     limit: any = 20
   ): Promise<{
-    chatRooms: any[];
+    chatRooms: Array<Record<string, unknown>>;
     total: number;
     totalPages: number;
     hasNext: boolean;
@@ -133,7 +135,10 @@ export class ChatService {
       const userObjectId = toObjectId(userId);
 
       // Use aggregation pipeline to avoid N+1 queries
-      const [chatRoomsResult] = await ChatRoom.aggregate([
+      const [chatRoomsResult] = await ChatRoom.aggregate<{
+        metadata: Array<{ total: number }>;
+        chatRooms: Array<Record<string, unknown>>;
+      }>([
         // Match chat rooms for this user
         {
           $match: {
@@ -347,7 +352,9 @@ export class ChatService {
         },
       ]);
 
-      logger.info(`Message sent: ${message._id} in room ${chatRoomId}`);
+      logger.info(
+        `Message sent: ${message._id.toString()} in room ${chatRoomId}`
+      );
 
       return message;
     } catch (error) {
@@ -365,7 +372,7 @@ export class ChatService {
     query: GetMessagesQuery = {}
   ): Promise<{
     messages: IMessage[];
-    pagination: Record<string, any>;
+    pagination: ReturnType<typeof getPaginationInfo>;
   }> {
     try {
       const { before } = query;
@@ -541,15 +548,18 @@ export class ChatService {
         throw new AppError('Chat room not found or access denied', 404);
       }
 
-      // Only allow certain updates and check permissions
-      const allowedUpdates = ['name', 'description', 'avatar'];
-      const updates: Record<string, any> = {};
+      const updates: Partial<Pick<IChatRoom, 'name' | 'description' | 'avatar'>> =
+        {};
 
-      Object.keys(updateData).forEach(key => {
-        if (allowedUpdates.includes(key)) {
-          updates[key] = (updateData as Record<string, any>)[key];
-        }
-      });
+      if (typeof updateData.name === 'string') {
+        updates.name = updateData.name;
+      }
+      if (typeof updateData.description === 'string') {
+        updates.description = updateData.description;
+      }
+      if (typeof updateData.avatar === 'string') {
+        updates.avatar = updateData.avatar;
+      }
 
       // For group chats, only creator can update certain fields
       if (chatRoom.type === ChatRoomType.GROUP) {
@@ -565,7 +575,11 @@ export class ChatService {
 
       logger.info(`Chat room updated: ${roomId} by ${userId}`);
 
-      return updatedRoom!;
+      if (!updatedRoom) {
+        throw new AppError('Chat room not found after update', 404);
+      }
+
+      return updatedRoom;
     } catch (error) {
       logger.error('Error in updateChatRoom:', error);
       if (error instanceof AppError) {

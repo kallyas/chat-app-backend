@@ -2,7 +2,6 @@ import { User, IUser } from '@/models';
 import { AppError } from '@/middleware';
 import {
   generateResetToken,
-  sanitizeUser,
   validatePagination,
   calculateSkip,
 } from '@/utils';
@@ -10,6 +9,18 @@ import { logger } from '@/config/logger';
 import { RegisterUserData, LoginUserData } from '@/types';
 import crypto from 'crypto';
 import bcrypt from 'bcryptjs';
+import mongoose from 'mongoose';
+
+type UserProfileUpdate = Pick<IUser, 'username' | 'profilePic' | 'password'>;
+type SearchUsersQuery = {
+  _id: { $ne: string };
+  username?: { $regex: string; $options: 'i' };
+  email?: { $regex: string; $options: 'i' };
+  $or?: Array<
+    | { username: { $regex: string; $options: 'i' } }
+    | { email: { $regex: string; $options: 'i' } }
+  >;
+};
 
 export class AuthService {
   static async registerUser(userData: RegisterUserData): Promise<IUser> {
@@ -113,16 +124,17 @@ export class AuthService {
     updateData: Partial<IUser>
   ): Promise<IUser> {
     try {
-      const allowedUpdates = ['username', 'profilePic', 'password'];
-      const updates: Partial<IUser> = {};
+      const updates: Partial<UserProfileUpdate> = {};
 
-      Object.keys(updateData).forEach(key => {
-        if (allowedUpdates.includes(key)) {
-          (updates as Record<string, any>)[key] = (
-            updateData as Record<string, any>
-          )[key];
-        }
-      });
+      if (typeof updateData.username === 'string') {
+        updates.username = updateData.username;
+      }
+      if (typeof updateData.profilePic === 'string') {
+        updates.profilePic = updateData.profilePic;
+      }
+      if (typeof updateData.password === 'string') {
+        updates.password = updateData.password;
+      }
 
       if (updates.username) {
         const existingUser = await User.findOne({
@@ -133,11 +145,6 @@ export class AuthService {
         if (existingUser) {
           throw new AppError('Username already taken', 400);
         }
-      }
-
-      // Increment token version if password is being updated to invalidate existing tokens
-      if (updates.password) {
-        (updates as any).tokenVersion = { $inc: 1 };
       }
 
       const user = await User.findByIdAndUpdate(
@@ -153,13 +160,13 @@ export class AuthService {
       logger.info(`User profile updated: ${user.email}`);
 
       return user;
-    } catch (error: any) {
+    } catch (error: unknown) {
       logger.error('Error in updateUserProfile:', error);
       if (error instanceof AppError) {
         throw error;
       }
-      if (error.name === 'ValidationError') {
-        const errors = Object.values(error.errors).map((el: any) => el.message);
+      if (error instanceof mongoose.Error.ValidationError) {
+        const errors = Object.values(error.errors).map(el => el.message);
         throw new AppError(`Invalid input data: ${errors.join('. ')}`, 400);
       }
       throw new AppError('Failed to update profile', 500);
@@ -236,8 +243,8 @@ export class AuthService {
     query: string,
     currentUserId: string,
     type: 'username' | 'email' | 'both' = 'both',
-    page: any = 1,
-    limit: any = 20
+    page: string | number = 1,
+    limit: string | number = 20
   ): Promise<{
     users: IUser[];
     total: number;
@@ -252,7 +259,7 @@ export class AuthService {
         limit
       );
 
-      const searchConditions: Record<string, any> = {
+      const searchConditions: SearchUsersQuery = {
         _id: { $ne: currentUserId },
       };
 
@@ -315,8 +322,8 @@ export class AuthService {
   }
 
   static async getOnlineUsers(
-    page: any = 1,
-    limit: any = 20
+    page: string | number = 1,
+    limit: string | number = 20
   ): Promise<{
     users: IUser[];
     total: number;

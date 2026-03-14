@@ -2,7 +2,7 @@ import { Response } from 'express';
 import { ChatService } from '@/services';
 import { catchAsync, AppError } from '@/middleware';
 import { sendMessageSchema, paginationSchema, objectIdSchema } from '@/utils';
-import type { AuthRequest, SendMessageData, GetMessagesQuery } from '@/types';
+import type { AuthRequest, SendMessageData } from '@/types';
 
 export const sendMessage = catchAsync(
   async (req: AuthRequest, res: Response) => {

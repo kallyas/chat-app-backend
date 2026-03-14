@@ -3,6 +3,9 @@ import { authController } from '@/controllers';
 import { authenticateToken, authLimiter } from '@/middleware';
 
 const router = Router();
+const requireAuth = (req: Parameters<typeof authenticateToken>[0], res: Parameters<typeof authenticateToken>[1], next: Parameters<typeof authenticateToken>[2]) => {
+  void authenticateToken(req, res, next);
+};
 
 // Public routes
 router.post('/register', authLimiter, authController.register);
@@ -20,8 +23,8 @@ router.post(
 router.post('/refresh-token', authController.refreshToken);
 
 // Protected routes
-router.post('/logout', authenticateToken, authController.logout);
-router.get('/me', authenticateToken, authController.getMe);
-router.put('/me', authenticateToken, authController.updateProfile);
+router.post('/logout', requireAuth, authController.logout);
+router.get('/me', requireAuth, authController.getMe);
+router.put('/me', requireAuth, authController.updateProfile);
 
 export default router;

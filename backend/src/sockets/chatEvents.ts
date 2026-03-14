@@ -1,9 +1,9 @@
-import { Server, Socket } from 'socket.io';
+import { Server } from 'socket.io';
 import { ChatService } from '@/services';
 import { AuthenticatedSocket } from './socketAuth';
 import { logger } from '@/config/logger';
 import { sendMessageSchema, objectIdSchema } from '@/utils';
-import { User, ChatRoom } from '@/models';
+import { User, ChatRoom, MessageType } from '@/models';
 import { socketRateLimiter, SOCKET_RATE_LIMITS } from '@/utils/socketRateLimit';
 
 export interface TypingData {
@@ -166,14 +166,20 @@ export const setupChatEvents = (io: Server, socket: AuthenticatedSocket) => {
       }
 
       // Validate message content
-      const { error, value } = sendMessageSchema.validate(messageContent);
-      if (error) {
-        socket.emit('error', { message: error.details[0].message });
+      const validation = sendMessageSchema.validate(messageContent) as {
+        error?: { details: Array<{ message: string }> };
+        value: Omit<SocketSendMessageData, 'roomId'>;
+      };
+      if (validation.error) {
+        socket.emit('error', { message: validation.error.details[0].message });
         return;
       }
 
       const messageData = {
-        ...value,
+        ...validation.value,
+        type: validation.value.type
+          ? (validation.value.type as MessageType)
+          : undefined,
         chatRoomId: roomId,
         senderId: socket.userId!,
       };
