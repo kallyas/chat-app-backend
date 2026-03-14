@@ -1,10 +1,6 @@
 import { User, IUser } from '@/models';
 import { AppError } from '@/middleware';
-import {
-  generateResetToken,
-  validatePagination,
-  calculateSkip,
-} from '@/utils';
+import { generateResetToken, validatePagination, calculateSkip } from '@/utils';
 import { logger } from '@/config/logger';
 import { RegisterUserData, LoginUserData } from '@/types';
 import crypto from 'crypto';

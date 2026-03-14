@@ -3,7 +3,11 @@ import { userController } from '@/controllers';
 import { authenticateToken, searchLimiter } from '@/middleware';
 
 const router = Router();
-const requireAuth = (req: Parameters<typeof authenticateToken>[0], res: Parameters<typeof authenticateToken>[1], next: Parameters<typeof authenticateToken>[2]) => {
+const requireAuth = (
+  req: Parameters<typeof authenticateToken>[0],
+  res: Parameters<typeof authenticateToken>[1],
+  next: Parameters<typeof authenticateToken>[2]
+) => {
   void authenticateToken(req, res, next);
 };
 

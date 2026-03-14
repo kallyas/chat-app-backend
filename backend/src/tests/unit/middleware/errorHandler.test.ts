@@ -19,7 +19,7 @@ describe('Error Handler Middleware', () => {
   let mockResponse: Partial<Response>;
   let nextFunction: NextFunction;
 
-  const getJsonPayload = <T,>() => {
+  const getJsonPayload = <T>() => {
     const mockJson = mockResponse.json as jest.Mock;
     const calls = mockJson.mock.calls as unknown[][];
     return calls[0][0] as T;

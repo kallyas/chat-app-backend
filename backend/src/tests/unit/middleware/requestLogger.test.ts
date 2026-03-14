@@ -76,7 +76,11 @@ describe('Request Logger Middleware', () => {
   });
 
   it('should log requests on response finish', () => {
-    requestLogger(mockRequest as AuthRequest, mockResponse as Response, nextFunction);
+    requestLogger(
+      mockRequest as AuthRequest,
+      mockResponse as Response,
+      nextFunction
+    );
 
     eventHandlers.finish();
 
@@ -94,7 +98,11 @@ describe('Request Logger Middleware', () => {
       configurable: true,
     });
 
-    requestLogger(mockRequest as AuthRequest, mockResponse as Response, nextFunction);
+    requestLogger(
+      mockRequest as AuthRequest,
+      mockResponse as Response,
+      nextFunction
+    );
 
     eventHandlers.close();
 

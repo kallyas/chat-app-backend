@@ -35,7 +35,9 @@ export const createError = (message: string, statusCode: number) => {
   return new AppError(message, statusCode);
 };
 
-const handleCastErrorDB = (err: Pick<mongoose.Error.CastError, 'path' | 'value'>) => {
+const handleCastErrorDB = (
+  err: Pick<mongoose.Error.CastError, 'path' | 'value'>
+) => {
   const message = `Invalid ${err.path}: ${err.value}`;
   return new AppError(message, 400);
 };

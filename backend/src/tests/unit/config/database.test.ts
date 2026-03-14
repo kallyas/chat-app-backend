@@ -54,14 +54,16 @@ describe('Database', () => {
 
   describe('health state', () => {
     it('should report healthy when mongoose is connected', () => {
-      (mongoose.connection as unknown as { _readyState: number })._readyState = 1;
+      (mongoose.connection as unknown as { _readyState: number })._readyState =
+        1;
 
       expect(database.isHealthy()).toBe(true);
       expect(database.getStatus()).toBe('connected');
     });
 
     it('should report non-healthy state when mongoose is disconnected', () => {
-      (mongoose.connection as unknown as { _readyState: number })._readyState = 0;
+      (mongoose.connection as unknown as { _readyState: number })._readyState =
+        0;
 
       expect(database.isHealthy()).toBe(false);
       expect(database.getStatus()).toBe('disconnected');

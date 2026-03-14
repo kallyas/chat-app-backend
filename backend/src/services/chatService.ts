@@ -548,8 +548,9 @@ export class ChatService {
         throw new AppError('Chat room not found or access denied', 404);
       }
 
-      const updates: Partial<Pick<IChatRoom, 'name' | 'description' | 'avatar'>> =
-        {};
+      const updates: Partial<
+        Pick<IChatRoom, 'name' | 'description' | 'avatar'>
+      > = {};
 
       if (typeof updateData.name === 'string') {
         updates.name = updateData.name;
